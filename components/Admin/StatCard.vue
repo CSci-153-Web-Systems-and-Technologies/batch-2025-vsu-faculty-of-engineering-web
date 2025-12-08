@@ -28,12 +28,33 @@ defineProps<{
 </script>
 
 <style scoped lang="postcss">
-.stat-card { @apply relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition; }
-.stat-card::after { content:""; @apply pointer-events-none absolute right-0 top-0 h-16 w-16 rounded-bl-[24px];
-  background: radial-gradient(120px 120px at 100% 0%, rgba(0,0,0,0.04), transparent 60%); }
-.stat-card:hover { @apply shadow-md; }
-.stat-icon { @apply mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl ring-1; }
-.stat-label { @apply text-sm font-medium text-gray-600; }
-.stat-number { @apply mt-1 text-3xl font-extrabold tracking-tight text-gray-900; }
-.stat-sub { @apply mt-1 text-xs text-gray-500; }
+.stat-card {
+  @apply relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition cursor-pointer;
+}
+
+.stat-card::after {
+  content: "";
+  @apply pointer-events-none absolute right-0 top-0 h-16 w-16 rounded-bl-[24px];
+  background: radial-gradient(120px 120px at 100% 0%, rgba(0,0,0,0.04), transparent 60%);
+}
+
+.stat-card:hover {
+  @apply shadow-md;
+}
+
+.stat-icon {
+  @apply mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl ring-1;
+}
+
+.stat-label {
+  @apply text-sm font-medium text-gray-600;
+}
+
+.stat-number {
+  @apply mt-1 text-3xl font-extrabold tracking-tight text-gray-900;
+}
+
+.stat-sub {
+  @apply mt-1 text-xs text-gray-500;
+}
 </style>
