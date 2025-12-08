@@ -20,7 +20,7 @@
             <!-- Departments -->
             <li>
               <NuxtLink
-                to="/admin/super-admin/manage_department"
+                to="/admin/super-admin/departments/manage_department"
                 class="block rounded px-3 py-2 transition duration-300 hover:scale-105 hover:bg-yellow-400"
                 exact-active-class="text-black bg-yellow-400"
               >
