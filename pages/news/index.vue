@@ -3,8 +3,8 @@
     <!-- Cover -->
     <div class="relative flex items-center w-full font-playfair">
       <img
-        src="/images/cet.jpg"
-        alt="Research Cover"
+        :src="coverImageUrl"
+        alt="Offices and Administration cover"
         class="object-cover w-full h-44 md:h-128"
       />
       <div
@@ -191,7 +191,7 @@ definePageMeta({ layout: 'custom' })
 
 import { ref, computed, watch } from 'vue'
 import { useFirestore, useCollection } from 'vuefire'
-import { collection, query, where, orderBy } from 'firebase/firestore'
+import { collection, query, where, orderBy, doc, onSnapshot} from 'firebase/firestore'
 import { useRouter } from 'vue-router'
 import { UiButton } from '#components'
 
@@ -203,6 +203,7 @@ const currentPage = ref(1)
 const db = useFirestore()
 const newsRef = collection(db, 'news')
 const router = useRouter()
+const coverImageUrl = ref('/images/cet_administration.jpg')
 
 // Photo Modal state
 const showPhotoModal = ref(false)
@@ -213,6 +214,18 @@ function openPhotoModal(src: string, alt?: string) {
   photoModalSrc.value = src
   photoModalAlt.value = alt || ''
   showPhotoModal.value = true
+}
+
+// 🔹 Fetch cover image from Firestore: page_covers / office_admin
+const fetchCoverImage = () => {
+  const coverRef = doc(db, 'page_covers', 'news')
+  onSnapshot(coverRef, (snap) => {
+    if (snap.exists()) {
+      const data = snap.data()
+      coverImageUrl.value =
+        data.coverImageUrl || data.imageUrl || coverImageUrl.value
+    }
+  })
 }
 
 // Only show published, sorted by date descending
@@ -272,6 +285,10 @@ function formatDate(date: Date | undefined) {
     day: 'numeric',
   })
 }
+
+onMounted(() => {
+  fetchCoverImage()
+})
 </script>
 
 <style scoped>
