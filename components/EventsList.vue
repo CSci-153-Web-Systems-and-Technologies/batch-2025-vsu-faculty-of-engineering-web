@@ -156,6 +156,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue"
+import type { Ref } from "vue"
 import { useRouter } from "vue-router"
 import { collection, getDocs } from "firebase/firestore"
 import { useFirestore } from "vuefire"
@@ -171,7 +172,7 @@ type ContentRecord = EventRecord & {
 const props = defineProps<{
   /** Array of events passed from parent */
   events?: ContentRecord[]
-  /** Firestore collection name, e.g. "events", "news", "research" */
+  /** Firestore collection name, e.g. "events", "news", "researches" */
   collectionName: string
   /** Logical item type for ShareButton, e.g. "event", "news", "research" */
   itemType?: string
@@ -185,11 +186,14 @@ const props = defineProps<{
   searchText?: string
   /** Limit number of visible items (default: 3) */
   maxVisible?: number
+  /** 🔹 Base route for "Read more", e.g. "/events", "/news", "/research" */
+  itemRouteBase?: string
 }>()
 
 const emit = defineEmits<{
   (e: "read-more", id: string): void
 }>()
+
 // ---------- CORE SETUP ----------
 const db = useFirestore()
 const router = useRouter()
@@ -425,8 +429,23 @@ const effectiveItemType = computed(
       : props.collectionName),
 )
 
+/**
+ * ✅ ROUTING FIX:
+ * Uses itemRouteBase if provided (e.g. "/research"),
+ * otherwise falls back to "/<collectionName>", with
+ * a special case for "researches" → "/research".
+ */
 function readMore(id: string) {
+  // still emit if a parent wants to listen
   emit("read-more", id)
+
+  const base =
+    props.itemRouteBase ||
+    (props.collectionName === "researches"
+      ? "/research"
+      : `/${props.collectionName}`)
+
+  router.push(`${base}/${id}`)
 }
 
 // ---------- Labels (keep design, make text dynamic) ----------
