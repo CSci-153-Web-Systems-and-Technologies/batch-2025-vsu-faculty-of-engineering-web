@@ -1,43 +1,63 @@
 <template>
-  <div class="max-w-5xl px-4 py-8 mx-auto">
-    <!-- Page title -->
-    <span class="pb-4 text-2xl font-bold text-red-900 md:pb-8 md:text-5xl font-playfair">College Downloads</span>
-
-    <!-- Empty / loading states -->
-    <div v-if="!downloads" class="p-6 text-gray-500 bg-white border rounded">
-      Loading downloads…
-    </div>
-    <div v-else-if="downloads.length === 0" class="p-10 text-center text-gray-500 bg-white border rounded">
-      No downloads yet.
-    </div>
-
-    <!-- List all download entries -->
-    <div v-else class="space-y-8">
-      <article
-        v-for="item in downloads"
-        :key="item.id"
-        class="p-5 bg-white border rounded-lg shadow-sm"
+  <main class="bg-white">
+     <div class="relative flex items-center w-full font-playfair">
+      <img
+        :src="coverImageUrl"
+        alt="Offices and Administration cover"
+        class="object-cover w-full h-44 md:h-128"
+      />
+      <div
+        class="absolute top-16 md:top-40 left-6 md:left-[120px] md:px-4 md:py-4 px-2 py-2 bg-red-900/80"
       >
-        <!-- Title -->
-        <span class="text-2xl font-bold text-red-900">
-          {{ item.title }}
-        </span>
-
-        <!-- Byline -->
-        <div class="mt-1 text-sm text-gray-600">
-          By {{ item.author || '—' }}
-          <span class="mx-2 text-gray-300">•</span>
-          {{ formatDate(item.createdAt) }}
-        </div>
-
-        <!-- Rich content (tables/links) -->
-        <div class="mt-4 prose max-w-none">
-          <!-- force links to open in a new tab -->
-          <div v-html="externalizedLinks(item.content)"></div>
-        </div>
-      </article>
+        <span class="text-xl text-white md:text-6xl">Download</span>
+      </div>
     </div>
-  </div>
+    <div class="max-w-5xl px-4 py-8 mx-auto">
+      <!-- Page title -->
+      <div class="mx-auto mt-8 text-center md:mb-8">
+      <span
+        class="text-2xl font-extrabold tracking-wide text-red-900 uppercase font-playfair md:text-5xl"
+      >
+        FACULTY DOWNLOADS
+      </span>
+    </div>
+  
+      <!-- Empty / loading states -->
+      <div v-if="!downloads" class="p-6 text-gray-500 bg-white border rounded">
+        Loading downloads…
+      </div>
+      <div v-else-if="downloads.length === 0" class="p-10 text-center text-gray-500 bg-white border rounded">
+        No downloads yet.
+      </div>
+  
+      <!-- List all download entries -->
+      <div v-else class="space-y-8">
+        <article
+          v-for="item in downloads"
+          :key="item.id"
+          class="p-5 bg-white border rounded-lg shadow-sm"
+        >
+          <!-- Title -->
+          <span class="text-2xl font-bold text-red-900">
+            {{ item.title }}
+          </span>
+  
+          <!-- Byline -->
+          <div class="mt-1 text-sm text-gray-600">
+            By {{ item.author || '—' }}
+            <span class="mx-2 text-gray-300">•</span>
+            {{ formatDate(item.createdAt) }}
+          </div>
+  
+          <!-- Rich content (tables/links) -->
+          <div class="mt-4 prose max-w-none">
+            <!-- force links to open in a new tab -->
+            <div v-html="externalizedLinks(item.content)"></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </main>
 </template>
 
 <script setup lang="ts">
@@ -47,13 +67,29 @@
  * - Renders stored HTML (tables/links) with nice styles.
  */
 import { useFirestore, useCollection } from 'vuefire'
-import { collection, orderBy, query, Timestamp } from 'firebase/firestore'
+import { collection, orderBy, query, Timestamp, doc, onSnapshot } from 'firebase/firestore'
 definePageMeta({
     layout: 'custom',
 })
 const db = useFirestore()
 const q = query(collection(db, 'downloads'), orderBy('createdAt', 'desc'))
 const downloads = useCollection(q)
+const coverImageUrl = ref('/images/cet_administration.jpg')
+
+// 🔹 Fetch cover image from Firestore: page_covers / office_admin
+const fetchCoverImage = () => {
+  const coverRef = doc(db, 'page_covers', 'downloads')
+  onSnapshot(coverRef, (snap) => {
+    if (snap.exists()) {
+      const data = snap.data()
+      coverImageUrl.value =
+        data.coverImageUrl || data.imageUrl || coverImageUrl.value
+    }
+  })
+}
+onMounted(() => {
+  fetchCoverImage()
+})
 
 /** Friendly date */
 function formatDate(ts?: Timestamp) {

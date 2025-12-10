@@ -2,7 +2,11 @@
   <main class="bg-white">
     <!-- Cover -->
     <div class="relative flex items-center w-full font-playfair">
-      <img src="/images/cet.jpg" alt="Research Cover" class="object-cover w-full h-44 md:h-128" />
+       <img
+        :src="coverImageUrl"
+        alt="Offices and Administration cover"
+        class="object-cover w-full h-44 md:h-128"
+      />
       <div
         class="absolute top-16 md:top-40 left-6 md:left-[120px] md:px-4 md:py-4 px-2 py-2 bg-red-900/80"
       >
@@ -109,7 +113,7 @@ definePageMeta({ layout: 'custom' })
 
 import { ListFilter } from 'lucide-vue-next'
 import { onMounted, ref, computed, watch } from 'vue'
-import { collection, getDocs, orderBy, query } from 'firebase/firestore'
+import { collection, getDocs, orderBy, query, doc, onSnapshot } from 'firebase/firestore'
 import { useFirestore } from 'vuefire'
 import { useRouter, useRoute } from 'vue-router'
 
@@ -121,6 +125,7 @@ const route = useRoute()
 const researches = ref<any[]>([])
 const departments = ref<{ id: string; name: string }[]>([])
 const deptNameMap = ref<Record<string, string>>({})
+const coverImageUrl = ref('/images/cet_administration.jpg')
 
 /* Filters (initialised from query so they sync with moreResearch.vue) */
 const selectedDeptId = ref<string>((route.query.dept as string) || '')      // '' = All
@@ -132,6 +137,20 @@ const selectedDeptLabel = computed(() => {
   return deptNameMap.value[selectedDeptId.value] || 'Department'
 })
 
+// 🔹 Fetch cover image from Firestore: page_covers / office_admin
+const fetchCoverImage = () => {
+  const coverRef = doc(db, 'page_covers', 'research')
+  onSnapshot(coverRef, (snap) => {
+    if (snap.exists()) {
+      const data = snap.data()
+      coverImageUrl.value =
+        data.coverImageUrl || data.imageUrl || coverImageUrl.value
+    }
+  })
+}
+onMounted(() => {
+  fetchCoverImage()
+})
 /* Years derived from data (all researches, can leave as-is) */
 const years = computed<number[]>(() => {
   const set = new Set<number>()
