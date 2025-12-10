@@ -1,6 +1,7 @@
 // composables/useUiTiptapEditor.ts
 import { ref, watch } from 'vue'
-import { useEditor, type Editor } from '@tiptap/vue-3'
+import { useEditor } from '@tiptap/vue-3'
+import type { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
@@ -58,11 +59,108 @@ function convertInlineFontSizesToClasses(html: string): string {
   }
 }
 
-export function useUiTiptapEditor(props: UseUiTiptapEditorProps, emit: UseUiTiptapEditorEmit) {
+/**
+ * Read fontSize from the current selection.
+ * - If caret only → value at caret.
+ * - If range and all text nodes share same size → that size.
+ * - If mixed or no explicit size mark → ''.
+ */
+function computeSelectionFontSize(editor: Editor | null | undefined): FontSizeValue | '' {
+  if (!editor) return ''
+
+  const { state } = editor
+  const { from, to, empty } = state.selection
+
+  // Caret only → read current mark
+  if (empty) {
+    const attrs = editor.getAttributes('fontSize')
+    const raw = (attrs?.size ?? attrs?.fontSize) as string | undefined
+    return raw && isFontSizeValue(raw) ? raw : ''
+  }
+
+  let found: string | null = null
+  let mixed = false
+
+  state.doc.nodesBetween(from, to, (node) => {
+    if (!node.isText) return
+    const mark = node.marks.find((m) => m.type.name === 'fontSize')
+    const size = (mark?.attrs?.size ?? mark?.attrs?.fontSize) as string | null
+
+    if (size == null) {
+      if (found !== null) {
+        mixed = true
+        return false
+      }
+      return
+    }
+
+    if (found === null) {
+      found = size
+    } else if (found !== size) {
+      mixed = true
+      return false
+    }
+  })
+
+  if (mixed || !found || !isFontSizeValue(found)) return ''
+  return found as FontSizeValue
+}
+
+/**
+ * Same idea for fontFamily.
+ */
+function computeSelectionFontFamily(editor: Editor | null | undefined): string {
+  if (!editor) return ''
+
+  const { state } = editor
+  const { from, to, empty } = state.selection
+
+  // Caret only
+  if (empty) {
+    const attrs = editor.getAttributes('fontFamily')
+    return (attrs?.fontFamily ?? attrs?.family ?? '') as string
+  }
+
+  let found: string | null = null
+  let mixed = false
+
+  state.doc.nodesBetween(from, to, (node) => {
+    if (!node.isText) return
+    const mark = node.marks.find((m) => m.type.name === 'fontFamily')
+    const fam = (mark?.attrs?.fontFamily ?? mark?.attrs?.family) as string | null
+
+    if (!fam) {
+      if (found !== null) {
+        mixed = true
+        return false
+      }
+      return
+    }
+
+    if (found === null) {
+      found = fam
+    } else if (found !== fam) {
+      mixed = true
+      return false
+    }
+  })
+
+  if (mixed || !found) return ''
+  return found
+}
+
+export function useUiTiptapEditor(
+  props: UseUiTiptapEditorProps,
+  emit: UseUiTiptapEditorEmit,
+) {
   const storage = useFirebaseStorage()
   const imageInput = ref<HTMLInputElement | null>(null)
 
   const fontSizes: FontSizeValue[] = [...FONT_SIZE_VALUES]
+
+  // What the dropdowns should currently display
+  const currentFontSize = ref<FontSizeValue | ''>('') // '' = mixed / none
+  const currentFontFamily = ref<string>('')            // '' = mixed / none
 
   const editor = useEditor({
     editable: props.editing,
@@ -85,6 +183,10 @@ export function useUiTiptapEditor(props: UseUiTiptapEditorProps, emit: UseUiTipt
       TableCell,
     ],
     onUpdate: ({ editor }) => emit('update:modelValue', editor.getHTML()),
+    onSelectionUpdate: ({ editor }) => {
+      currentFontSize.value = computeSelectionFontSize(editor)
+      currentFontFamily.value = computeSelectionFontFamily(editor)
+    },
     editorProps: {
       transformPastedHTML: (html) => convertInlineFontSizesToClasses(html),
     },
@@ -110,8 +212,20 @@ export function useUiTiptapEditor(props: UseUiTiptapEditorProps, emit: UseUiTipt
 
   // Font size dropdown
   function onFontSizeChange(event: Event) {
-    const raw = (event.target as HTMLSelectElement).value
-    if (!isFontSizeValue(raw)) return
+    const raw = (event.target as HTMLSelectElement).value as FontSizeValue | ''
+    currentFontSize.value = raw
+
+    // Blank option → clear size mark
+    if (!raw || !isFontSizeValue(raw)) {
+      editor.value
+        ?.chain()
+        .focus()
+        .extendMarkRange('fontSize')
+        .unsetFontSize()
+        .run()
+      return
+    }
+
     editor.value
       ?.chain()
       .focus()
@@ -124,13 +238,15 @@ export function useUiTiptapEditor(props: UseUiTiptapEditorProps, emit: UseUiTipt
   // Font family dropdown
   function onFontFamilyChange(event: Event) {
     const value = (event.target as HTMLSelectElement).value
+    currentFontFamily.value = value
+
     const chain = editor.value?.chain().focus()
     if (!chain) return
     if (!value) chain.unsetFontFamily().run()
     else chain.setFontFamily(value).run()
   }
 
-  // Headings (clear fontSize mark first)
+  // Headings (clear fontSize mark first, like Word)
   function setHeading(level: 2 | 3) {
     const chain = editor.value?.chain().focus()
     if (!chain) return
@@ -140,6 +256,9 @@ export function useUiTiptapEditor(props: UseUiTiptapEditorProps, emit: UseUiTipt
       .unsetFontSize()
       .toggleHeading({ level })
       .run()
+
+    // Heading size controlled by CSS; dropdown becomes blank
+    currentFontSize.value = ''
   }
 
   // Links
@@ -183,6 +302,8 @@ export function useUiTiptapEditor(props: UseUiTiptapEditorProps, emit: UseUiTipt
     editor,
     imageInput,
     fontSizes,
+    currentFontSize,
+    currentFontFamily,
     onFontSizeChange,
     onFontFamilyChange,
     setHeading,

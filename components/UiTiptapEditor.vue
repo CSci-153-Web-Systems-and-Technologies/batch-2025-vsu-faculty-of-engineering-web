@@ -4,16 +4,24 @@
     <!-- Toolbar -->
     <div v-if="editing" class="mb-4 flex flex-wrap items-center gap-2">
       <!-- Font Size -->
-      <select class="select select-bordered h-9 min-w-[120px]" @change="onFontSizeChange">
-        <option disabled selected>Font Size</option>
+      <select
+        class="select select-bordered h-9 min-w-[120px]"
+        :value="currentFontSize || ''"
+        @change="onFontSizeChange"
+      >
+        <option disabled value="">Font Size</option>
         <option v-for="size in fontSizes" :key="size" :value="size">
           {{ size }}
         </option>
       </select>
 
       <!-- Font Family -->
-      <select class="select select-bordered h-9 min-w-[160px]" @change="onFontFamilyChange">
-        <option disabled selected>Font</option>
+      <select
+        class="select select-bordered h-9 min-w-[160px]"
+        :value="currentFontFamily || ''"
+        @change="onFontFamilyChange"
+      >
+        <option disabled value="">Font</option>
         <option value="Arial, sans-serif">Arial</option>
         <option value="'Times New Roman', Times, serif">Times New Roman</option>
         <option value="Georgia, serif">Georgia</option>
@@ -248,6 +256,8 @@ const {
   editor,
   imageInput,
   fontSizes,
+  currentFontSize,
+  currentFontFamily,
   onFontSizeChange,
   onFontFamilyChange,
   setHeading,
@@ -328,7 +338,7 @@ const { tableOpen, tableMenuRef, GRID, hover, gridCells, pickTable, cmd } =
 :deep(.ProseMirror h2),
 :deep(.ProseMirror h3) {
   color: #7f1d1d !important; /* maroon / red-900 */
-  font-family: var(--cet-heading-font, inherit) !important;
+  font-family: var(--cet-heading-font, inherit);
 }
 
 /* Lists */
@@ -398,5 +408,3 @@ const { tableOpen, tableMenuRef, GRID, hover, gridCells, pickTable, cmd } =
   box-shadow: inset 0 0 0 2px #60a5fa;
 }
 </style>
-
-
