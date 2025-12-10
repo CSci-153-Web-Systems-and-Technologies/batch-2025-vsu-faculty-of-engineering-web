@@ -1,15 +1,16 @@
 <template>
   <div class="h-auto pb-6 border bg-neutral-50 rounded-xl">
     <!-- Header -->
-    <div class="pt-4 pb-4 mx-auto text-white bg-red-900 rounded-t">
-        <div class="flex items-center justify-center text-lg font-semibold">
-            <!-- <Clock class="font-bold size-10 " /> -->
-            <span class="ml-2 text-3xl font-semibold text-center font-montserrat">Recents</span>
-        </div>
+    <div class="pt-4 pb-4 mx-auto text-white bg-red-900 rounded-t-xl">
+      <div class="flex items-center justify-center text-lg font-semibold">
+        <span class="ml-2 text-3xl font-semibold text-center font-montserrat">
+          Recents
+        </span>
+      </div>
     </div>
 
-    <!-- Old events list -->
-    <div v-if="oldEvents.length" class="mt-6 ">
+    <!-- List -->
+    <div v-if="oldEvents.length" class="mt-6">
       <ul class="pl-6 pr-6 mt-6 space-y-2">
         <li
           v-for="ev in oldEvents"
@@ -18,24 +19,23 @@
         >
           <UiButton
             @click="readMore(ev.id)"
-            class="text-sm bg-transparent hover:bg-transparent hover:scale-105"
+            class="text-sm bg-transparent hover:bg-transparent hover:scale-105 font-medium text-center text-gray-800 truncate hover:text-red-900"
           >
-            <span class="w-64 font-medium text-left text-gray-800 truncate hover:text-red-900">
+            <!-- 🔹 Only the title now, no date shown -->
+           
               {{ ev.title }}
-            </span>
-            <span class="text-gray-500 shrink-0">
-              {{ miniDate(ev.createdAt || ev.date) }}
-            </span>
+            
           </UiButton>
         </li>
       </ul>
+
       <!-- See all (desktop) -->
-      <div class="hidden mt-4 mr-6 md:flex md:justify-end">
+      <div class="hidden mt-4 md:flex md:justify-end mr-5">
         <UiButton
           @click="goToMore"
           class="text-sm font-semibold text-white bg-red-900 hover:bg-red-950 hover:scale-105"
         >
-           {{ props.seeAllLabel }} →
+          {{ props.seeAllLabel }} →
         </UiButton>
       </div>
     </div>
@@ -59,15 +59,14 @@ export interface EventRecord {
   title: string
   createdAt?: EventDate
   date?: EventDate
+  status?: string
   [key: string]: unknown
 }
 
 const props = withDefaults(
   defineProps<{
     items: EventRecord[]
-    maxVisible?: number
     maxOldItems?: number
-    headerLabel?: string
     seeAllLabel?: string
     seeAllRoute?: string
     itemRouteBase?: string
@@ -75,28 +74,28 @@ const props = withDefaults(
     currentType?: string
   }>(),
   {
-    maxVisible: 3,
     maxOldItems: 10,
-    seeAllLabel: "",
-    seeAllRoute: "/events/moreEvents",
-    itemRouteBase: "/events",
-    currentType: "all",
+    seeAllLabel: '',
+    seeAllRoute: '/events/moreEvents',
+    itemRouteBase: '/events',
+    currentType: 'all',
   },
 )
 
 const router = useRouter()
 
+// 🔹 Convert various date formats to milliseconds
 function msFrom(value: EventDate): number {
   if (!value && value !== 0) return 0
-  if (typeof value === "number") return value
+  if (typeof value === 'number') return value
   if (value instanceof Date) return value.getTime()
-  if (typeof value === "string") return new Date(value).getTime()
+  if (typeof value === 'string') return new Date(value).getTime()
 
   if (
-    typeof value === "object" &&
+    typeof value === 'object' &&
     value &&
-    "toDate" in value &&
-    typeof (value as any).toDate === "function"
+    'toDate' in value &&
+    typeof (value as any).toDate === 'function'
   ) {
     return (value as Timestamp).toDate().getTime()
   }
@@ -104,16 +103,18 @@ function msFrom(value: EventDate): number {
   return 0
 }
 
+// 🔹 Only keep published items
 const isPublishedStatus = (value: any) =>
-  String(value || "").toLowerCase().trim() === "published"
+  String(value || '').toLowerCase().trim() === 'published'
 
+// 🔹 Sort items from latest → oldest using createdAt ?? date
 const sortedByDateDesc = computed(() =>
   [...props.items]
     .filter((item: any) => isPublishedStatus(item.status))
     .sort((a, b) => {
       const aTime = msFrom(a.createdAt ?? a.date)
       const bTime = msFrom(b.createdAt ?? b.date)
-      return bTime - aTime   // DESC
+      return bTime - aTime // DESC
     }),
 )
 
@@ -121,26 +122,16 @@ const oldEvents = computed(() =>
   sortedByDateDesc.value.slice(0, props.maxOldItems),
 )
 
-function miniDate(value: EventDate): string {
-  const time = msFrom(value)
-  if (!time) return ''
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: '2-digit',
-    year: 'numeric',
-  }).format(new Date(time))
-}
-
 function readMore(id: string) {
   router.push(`${props.itemRouteBase}/${id}`)
 }
 
 function goToMore() {
-  const type = props.currentType ?? "all"
+  const type = props.currentType ?? 'all'
 
   if (!props.seeAllRoute) return
 
-  if (type === "all") {
+  if (type === 'all') {
     router.push(props.seeAllRoute)
   } else {
     router.push({
@@ -151,9 +142,8 @@ function goToMore() {
 }
 </script>
 
-
 <style>
-/* * {
-  outline: 1px solid red;
-} */
+  /* *{
+    outline: 1px solid red;
+  } */
 </style>
