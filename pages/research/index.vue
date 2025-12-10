@@ -21,11 +21,10 @@
     <!-- Filters -->
     <div class="flex flex-row gap-4 mt-4 ml-4 md:ml-44">
       <!-- Year -->
-       <YearFilter
+      <YearFilter
         v-model="selectedYear"
         :years="years"
         :icon="ListFilter"
-
       />
 
       <!-- Department -->
@@ -60,7 +59,10 @@
 
     <!-- One-column list -->
     <section class="py-5 mx-auto md:max-w-7xl md:px-4">
-      <div v-if="filteredResearches.length" class="grid grid-cols-1 gap-10 md:grid-cols-[1fr_420px] md:items-start">
+      <div
+        v-if="filteredResearches.length"
+        class="grid grid-cols-1 gap-10 md:grid-cols-[1fr_420px] md:items-start"
+      >
         <!-- LEFT SIDE -->
         <EventsList
           :events="visibleResearches"
@@ -70,7 +72,7 @@
           type-field=""
           date-label="RESEARCH DATE"
           :search-text="''"
-          :max-visible="4"               
+          :max-visible="4"
           :item-route-base="'/research'"
           :see-all-route="'/research/moreResearch'"
         />
@@ -106,22 +108,23 @@
 definePageMeta({ layout: 'custom' })
 
 import { ListFilter } from 'lucide-vue-next'
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { collection, getDocs, orderBy, query } from 'firebase/firestore'
 import { useFirestore } from 'vuefire'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 const db = useFirestore()
 const router = useRouter()
+const route = useRoute()
 
 /* Data */
 const researches = ref<any[]>([])
 const departments = ref<{ id: string; name: string }[]>([])
 const deptNameMap = ref<Record<string, string>>({})
 
-/* Filters */
-const selectedDeptId = ref<string>('')      // '' = All
-const selectedYear = ref<string>('all')     // 'all' = All Years
+/* Filters (initialised from query so they sync with moreResearch.vue) */
+const selectedDeptId = ref<string>((route.query.dept as string) || '')      // '' = All
+const selectedYear = ref<string>((route.query.year as string) || 'all')     // 'all' = All Years
 
 /* Labels */
 const selectedDeptLabel = computed(() => {
@@ -179,8 +182,6 @@ const filteredResearches = computed(() => {
 
 /**
  * LEFT SIDE: main list = latest 4 published after filters.
- * researches are already loaded with `orderBy('date', 'desc')`,
- * so this slice keeps "latest first".
  */
 const visibleResearches = computed(() =>
   filteredResearches.value.slice(0, 4),
@@ -193,7 +194,6 @@ const visibleResearches = computed(() =>
 const recentResearches = computed(() =>
   filteredResearches.value.slice(4, 4 + 10),
 )
-
 
 /* Load data */
 onMounted(async () => {
@@ -232,11 +232,33 @@ function selectYear(year: string) {
   selectedYear.value = year
 }
 
+/** 🔗 Keep URL query in sync with current filters */
+watch(
+  [selectedYear, selectedDeptId],
+  () => {
+    router.replace({
+      path: route.path,
+      query: {
+        // keep other query params if any
+        ...route.query,
+        year: selectedYear.value !== 'all' ? selectedYear.value : undefined,
+        dept: selectedDeptId.value || undefined,
+      },
+    })
+  },
+)
+
+/** 🔗 Go to moreResearch carrying filters via query params */
 function goToAllResearch() {
-  router.push('/research/moreResearch')
+  router.push({
+    path: '/research/moreResearch',
+    query: {
+      year: selectedYear.value !== 'all' ? selectedYear.value : undefined,
+      dept: selectedDeptId.value || undefined,
+    },
+  })
 }
 </script>
-
 
 <style scoped>
 /* *{
