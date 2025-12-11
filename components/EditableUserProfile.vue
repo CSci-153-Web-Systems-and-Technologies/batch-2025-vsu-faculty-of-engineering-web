@@ -1,44 +1,131 @@
 <template>
   <div class="mx-auto w-full max-w-4xl overflow-hidden rounded-xl bg-white shadow-xl">
-    <div class="from-maroon bg-gradient-to-r to-red-700 p-6 text-center">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-maroon to-red-700 p-6 text-center">
       <h1 class="text-3xl font-extrabold text-white">Faculty Profile</h1>
     </div>
 
     <div class="p-8">
+      <!-- Top-right actions -->
+      <div class="mb-6 flex justify-end gap-4">
+        <!-- When NOT editing: just Edit -->
+        <button
+          v-if="!isEditing"
+          @click="toggleEdit"
+          :disabled="photoUploading"
+          class="rounded px-5 py-2 text-sm font-medium text-white"
+          :class="photoUploading
+            ? 'bg-gray-300 cursor-not-allowed'
+            : 'bg-gray-400 hover:bg-gray-600'"
+        >
+          Edit
+        </button>
+
+        <!-- When editing: Cancel + Save -->
+        <template v-else>
+          <button
+            type="button"
+            @click="toggleEdit"
+            :disabled="photoUploading"
+            class="rounded px-5 py-2 text-sm font-medium text-white"
+            :class="photoUploading
+              ? 'bg-gray-300 cursor-not-allowed'
+              : 'bg-gray-400 hover:bg-gray-600'"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            @click="handleSave"
+            :disabled="photoUploading"
+            class="rounded px-5 py-2 text-sm font-medium text-white"
+            :class="photoUploading
+              ? 'bg-red-300 cursor-not-allowed'
+              : 'bg-maroon hover:bg-red-700'"
+          >
+            Save
+          </button>
+        </template>
+      </div>
+
       <!-- Profile Picture -->
       <div class="mb-10 text-center">
         <div class="relative inline-block">
+          <!-- Avatar -->
           <img
-            :src="profilePhoto || 'https://via.placeholder.com/150'"
+            :src="profilePhoto || '/placeholder.png'"
             alt="Profile"
             class="mx-auto h-32 w-32 rounded-full border-4 border-white object-cover shadow-md"
+            :class="photoUploading ? 'opacity-60' : ''"
           />
+
+          <!-- Upload overlay / spinner -->
+          <div
+            v-if="photoUploading"
+            class="absolute inset-0 flex items-center justify-center rounded-full bg-black/30"
+          >
+            <!-- Simple spinner -->
+            <svg class="h-6 w-6 animate-spin text-white" viewBox="0 0 24 24">
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+                fill="none"
+              />
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+              />
+            </svg>
+          </div>
+
+          <!-- Pencil button (hidden while uploading) -->
           <label
-            v-if="isEditing"
+            v-if="isEditing && !photoUploading"
             for="file-upload"
-            class="bg-maroon absolute bottom-0 right-0 cursor-pointer rounded-full p-1 text-white"
+            class="absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-maroon text-white shadow-md"
             title="Upload new photo"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 11l6-6" />
-            </svg>
+            <Pencil class="h-4 w-4" />
           </label>
-          <input id="file-upload" type="file" class="hidden" accept="image/*" @change="onUpload" />
+
+          <input
+            id="file-upload"
+            type="file"
+            class="hidden"
+            accept="image/*"
+            @change="onUpload"
+          />
         </div>
-        <h2 class="mt-4 text-2xl font-bold text-gray-800">{{ profile.fullName }}</h2>
+
+        <h2 class="mt-4 text-2xl font-bold text-gray-800">
+          {{ profile.fullName }}
+        </h2>
       </div>
 
       <!-- Information Section -->
       <div class="mb-10 space-y-6">
-        <h3 class="text-maroon text-lg font-bold">Information</h3>
+        <h3 class="text-lg font-bold text-maroon">Information</h3>
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label class="text-sm font-semibold text-gray-600">Full Name</label>
-            <input v-model="profile.fullName" :disabled="!isEditing" class="mt-1 w-full rounded border px-3 py-2" />
+            <input
+              v-model="profile.fullName"
+              :disabled="!isEditing"
+              class="mt-1 w-full rounded border px-3 py-2"
+            />
           </div>
           <div>
             <label class="text-sm font-semibold text-gray-600">Specialization</label>
-            <input v-model="profile.specialization" :disabled="!isEditing" class="mt-1 w-full rounded border px-3 py-2" />
+            <input
+              v-model="profile.specialization"
+              :disabled="!isEditing"
+              class="mt-1 w-full rounded border px-3 py-2"
+            />
           </div>
 
           <div>
@@ -65,48 +152,65 @@
         </div>
 
         <!-- Highest Educational Attainment (UiTiptapEditor) -->
-<!-- Highest Educational Attainment (UiTiptapEditor) -->
-<div>
-  <label class="text-sm font-semibold text-gray-600">Highest Educational Attainment</label>
-  <client-only>
-    <!-- EDIT MODE -->
-    <UiTiptapEditor
-      v-if="isEditing"
-      :key="editorKey"
-      class="mt-1 rounded border shadow-sm"
-      v-model="educationDraft"        
-      :editing="isEditing"       
-      placeholder="About me"
-    />
-    <!-- VIEW MODE -->
-    <div
-      v-else
-      class="prose prose-sm mt-1 max-w-none leading-tight"
-      v-html="profile.educationHtml || 'N/A'"
-    ></div>
-  </client-only>
-</div>
-
+        <div>
+          <label class="text-sm font-semibold text-gray-600">
+            Highest Educational Attainment
+          </label>
+          <client-only>
+            <!-- EDIT MODE -->
+            <UiTiptapEditor
+              v-if="isEditing"
+              :key="editorKey"
+              class="mt-1 rounded border shadow-sm"
+              v-model="educationDraft"
+              :editing="isEditing"
+              placeholder="About me"
+            />
+            <!-- VIEW MODE -->
+            <div
+              v-else
+              class="prose prose-sm mt-1 max-w-none leading-tight"
+              v-html="profile.educationHtml || 'N/A'"
+            ></div>
+          </client-only>
+        </div>
 
         <!-- Websites -->
         <div>
           <label class="text-sm font-semibold text-gray-600">Websites</label>
           <div v-if="isEditing" class="mt-1 space-y-2">
-            <div v-for="(link, index) in profile.websites" :key="index" class="flex items-center gap-2">
-              <input v-model="profile.websites[index]" type="url" class="w-full rounded border px-3 py-2" />
-              <button @click="removeWebsite(index)" class="text-red-500" title="Remove">&times;</button>
+            <div
+              v-for="(link, index) in profile.websites"
+              :key="index"
+              class="flex items-center gap-2"
+            >
+              <input
+                v-model="profile.websites[index]"
+                type="url"
+                class="w-full rounded border px-3 py-2"
+              />
+              <button
+                @click="removeWebsite(index)"
+                class="text-red-500"
+                title="Remove"
+              >
+                &times;
+              </button>
             </div>
-            <button @click="addWebsite" class="text-sm text-blue-600">+ Add website</button>
+            <button @click="addWebsite" class="text-sm text-blue-600">
+              + Add website
+            </button>
           </div>
           <div v-else>
             <a
               v-for="(link, index) in profile.websites"
               :key="index"
               :href="link"
-              class="block text-blue-500 underline break-words"
+              class="block break-words text-blue-500 underline"
               target="_blank"
-              >{{ link }}</a
             >
+              {{ link }}
+            </a>
             <p v-if="!profile.websites.length">N/A</p>
           </div>
         </div>
@@ -114,11 +218,15 @@
 
       <!-- Account Details -->
       <div class="space-y-6">
-        <h3 class="text-maroon text-lg font-bold">Account Details</h3>
+        <h3 class="text-lg font-bold text-maroon">Account Details</h3>
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label class="text-sm font-semibold text-gray-600">Email</label>
-            <input v-model="profile.email" disabled class="mt-1 w-full rounded border bg-gray-100 px-3 py-2" />
+            <input
+              v-model="profile.email"
+              disabled
+              class="mt-1 w-full rounded border bg-gray-100 px-3 py-2"
+            />
           </div>
           <div>
             <label class="text-sm font-semibold text-gray-600">
@@ -134,23 +242,13 @@
           </div>
           <div v-if="isEditing && newPassword" class="md:col-span-2">
             <label class="text-sm font-semibold text-gray-600">Current Password</label>
-            <input v-model="currentPassword" type="password" class="mt-1 w-full rounded border px-3 py-2" />
+            <input
+              v-model="currentPassword"
+              type="password"
+              class="mt-1 w-full rounded border px-3 py-2"
+            />
           </div>
         </div>
-      </div>
-
-      <!-- Actions -->
-      <div class="mt-8 flex justify-end gap-4">
-        <button @click="toggleEdit" class="rounded bg-gray-400 px-5 py-2 text-white hover:bg-gray-600">
-          {{ isEditing ? 'Cancel' : 'Edit' }}
-        </button>
-        <button
-          v-if="isEditing"
-          @click="handleSave"
-          class="bg-maroon rounded px-5 py-2 text-white hover:bg-red-700"
-        >
-          Save
-        </button>
       </div>
     </div>
   </div>
@@ -159,12 +257,15 @@
 <script setup>
 import { ref, watch } from 'vue'
 import UiTiptapEditor from '@/components/UiTiptapEditor.vue'
+import { Pencil } from 'lucide-vue-next'
 
 const props = defineProps({
   initialProfile: { type: Object, required: true },
   profilePhoto: String,
   isFaculty: Boolean,
+  photoUploading: { type: Boolean, default: false },
 })
+
 const emit = defineEmits(['update-profile', 'upload-photo', 'change-password'])
 
 const isEditing = ref(false)
@@ -174,11 +275,14 @@ const currentPassword = ref('')
 /** Local reactive profile */
 const profile = ref({
   ...props.initialProfile,
-  websites: Array.isArray(props.initialProfile?.websites) ? [...props.initialProfile.websites] : [],
+  websites: Array.isArray(props.initialProfile?.websites)
+    ? [...props.initialProfile.websites]
+    : [],
   contact: props.initialProfile.contact || '',
   personalEmail: props.initialProfile.personalEmail || '',
   specialization: props.initialProfile.specialization || '',
-  educationHtml: props.initialProfile.educationHtml || props.initialProfile.education || '',
+  educationHtml:
+    props.initialProfile.educationHtml || props.initialProfile.education || '',
 })
 
 /** Tiptap content draft + key to force re-mount on cancel */
@@ -201,15 +305,13 @@ watch(
       educationDraft.value = profile.value.educationHtml || ''
     }
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 )
 
 const toggleEdit = () => {
   if (!isEditing.value) {
-    // entering edit mode: seed editor with saved HTML
     educationDraft.value = profile.value.educationHtml || ''
   } else {
-    // leaving edit mode without save: reset the editor by bumping key
     editorKey.value++
     newPassword.value = ''
     currentPassword.value = ''
@@ -218,7 +320,6 @@ const toggleEdit = () => {
 }
 
 const handleSave = () => {
-  // Trim trivial empty markup often produced by editors
   const cleaned = (educationDraft.value || '')
     .replace(/^(<p><br><\/p>\s*)+/, '')
     .replace(/(\s*<p><br><\/p>)+$/, '')
@@ -246,17 +347,20 @@ const handleSave = () => {
     })
   }
 
-  // reset edit state
   isEditing.value = false
   newPassword.value = ''
   currentPassword.value = ''
 }
 
 const addWebsite = () => profile.value.websites.push('')
-const removeWebsite = (index) => profile.value.websites.splice(index, 1)
+
+const removeWebsite = (index) => {
+  profile.value.websites.splice(index, 1)
+}
 
 const onUpload = (e) => {
-  const file = e.target.files?.[0]
+  const target = e.target
+  const file = target && target.files && target.files[0]
   if (file) emit('upload-photo', file)
 }
 </script>

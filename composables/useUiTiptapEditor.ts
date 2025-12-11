@@ -1,6 +1,6 @@
 // composables/useUiTiptapEditor.ts
 import { ref, watch } from 'vue'
-import { useEditor, type Editor } from '@tiptap/vue-3'
+import { useEditor } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
@@ -14,7 +14,6 @@ import ResizeImage from 'tiptap-extension-resize-image'
 import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage'
 import { useFirebaseStorage } from 'vuefire'
 
-import FontFamily from '@/extensions/FontFamily'
 import FontSize, {
   FONT_SIZE_VALUES,
   isFontSizeValue,
@@ -58,7 +57,10 @@ function convertInlineFontSizesToClasses(html: string): string {
   }
 }
 
-export function useUiTiptapEditor(props: UseUiTiptapEditorProps, emit: UseUiTiptapEditorEmit) {
+export function useUiTiptapEditor(
+  props: UseUiTiptapEditorProps,
+  emit: UseUiTiptapEditorEmit,
+) {
   const storage = useFirebaseStorage()
   const imageInput = ref<HTMLInputElement | null>(null)
 
@@ -70,7 +72,6 @@ export function useUiTiptapEditor(props: UseUiTiptapEditorProps, emit: UseUiTipt
     extensions: [
       StarterKit.configure({ bold: false }), // use CustomBold instead
       FontSize,
-      FontFamily,
       CustomBold,
       Underline,
       Link,
@@ -119,15 +120,6 @@ export function useUiTiptapEditor(props: UseUiTiptapEditorProps, emit: UseUiTipt
       .unsetFontSize()
       .setFontSize(raw)
       .run()
-  }
-
-  // Font family dropdown
-  function onFontFamilyChange(event: Event) {
-    const value = (event.target as HTMLSelectElement).value
-    const chain = editor.value?.chain().focus()
-    if (!chain) return
-    if (!value) chain.unsetFontFamily().run()
-    else chain.setFontFamily(value).run()
   }
 
   // Headings (clear fontSize mark first)
@@ -184,7 +176,6 @@ export function useUiTiptapEditor(props: UseUiTiptapEditorProps, emit: UseUiTipt
     imageInput,
     fontSizes,
     onFontSizeChange,
-    onFontFamilyChange,
     setHeading,
     addLink,
     triggerImageUpload,

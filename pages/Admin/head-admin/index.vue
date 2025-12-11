@@ -38,7 +38,7 @@ definePageMeta({
 const auth = getAuth();
 const db = getFirestore();
 const storage = getStorage();
-
+const PLACEHOLDER = '/placeholder.png'
 const profile = ref({
   fullName: '',
   specialization: '',
@@ -49,8 +49,7 @@ const profile = ref({
   contact: '',
   personalEmail: ''
 });
-
-const profilePhoto = ref('');
+const profilePhoto = ref(PLACEHOLDER);  
 const userData = ref(null);
 
 const fetchProfile = async () => {
@@ -74,7 +73,8 @@ const fetchProfile = async () => {
         personalEmail: data.personalEmail || ''
       };
 
-      profilePhoto.value = data.photo || 'https://via.placeholder.com/150';
+         const hasPhoto = typeof data.photo === 'string' && data.photo.trim() !== ''
+    profilePhoto.value = hasPhoto ? data.photo : PLACEHOLDER;
     }
   });
 };

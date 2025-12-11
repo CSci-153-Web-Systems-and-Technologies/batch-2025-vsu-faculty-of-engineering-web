@@ -11,15 +11,7 @@
         </option>
       </select>
 
-      <!-- Font Family -->
-      <select class="select select-bordered h-9 min-w-[160px]" @change="onFontFamilyChange">
-        <option disabled selected>Font</option>
-        <option value="Arial, sans-serif">Arial</option>
-        <option value="'Times New Roman', Times, serif">Times New Roman</option>
-        <option value="Georgia, serif">Georgia</option>
-        <option value="'Courier New', Courier, monospace">Courier New</option>
-        <option value="Roboto, sans-serif">Roboto</option>
-      </select>
+      <!-- (Font family dropdown removed) -->
 
       <!-- Inline / block controls -->
       <button
@@ -249,7 +241,6 @@ const {
   imageInput,
   fontSizes,
   onFontSizeChange,
-  onFontFamilyChange,
   setHeading,
   addLink,
   triggerImageUpload,
@@ -264,7 +255,8 @@ const { tableOpen, tableMenuRef, GRID, hover, gridCells, pickTable, cmd } =
 /* ─── Editor base ─────────────────────────────────────────────── */
 :deep(.ProseMirror) {
   min-height: 300px;
-  color: #111827; /* default body text = gray-900 / almost black */
+  color: #111827; /* default body text */
+  font-family: 'Roboto', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 /* Images */
@@ -289,7 +281,7 @@ const { tableOpen, tableMenuRef, GRID, hover, gridCells, pickTable, cmd } =
   cursor: pointer;
 }
 
-/* ─── Make editor spacing match Tailwind Typography (.prose) ─── */
+/* ─── Spacing like Tailwind Typography (.prose) ─── */
 :deep(.ProseMirror p,
       .ProseMirror ul,
       .ProseMirror ol,
@@ -323,12 +315,12 @@ const { tableOpen, tableMenuRef, GRID, hover, gridCells, pickTable, cmd } =
   font-weight: 600;
 }
 
-/* Headings = maroon */
+/* Headings = maroon + Montserrat */
 :deep(.ProseMirror h1),
 :deep(.ProseMirror h2),
 :deep(.ProseMirror h3) {
   color: #7f1d1d !important; /* maroon / red-900 */
-  font-family: var(--cet-heading-font, inherit) !important;
+  font-family: 'Montserrat', system-ui, sans-serif;
 }
 
 /* Lists */
@@ -398,5 +390,3 @@ const { tableOpen, tableMenuRef, GRID, hover, gridCells, pickTable, cmd } =
   box-shadow: inset 0 0 0 2px #60a5fa;
 }
 </style>
-
-
