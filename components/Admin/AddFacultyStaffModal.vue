@@ -13,7 +13,7 @@
         <!-- Header -->
         <header class="flex items-center justify-between border-b px-6 py-4">
           <h2 class="text-lg font-semibold text-gray-900">
-            Add Faculty/Staff
+            {{ isAssignHeadMode ? 'Assign Head Admin' : 'Add Faculty/Staff' }}
           </h2>
 
           <button
@@ -44,11 +44,9 @@
                 type="button"
                 class="flex w-full items-center rounded-lg border px-3 py-2 text-left transition
                        hover:bg-neutral-50"
-                :class="
-                  selectedUser && selectedUser.id === user.id
-                    ? 'border-red-900 bg-red-50/80 ring-1 ring-red-200'
-                    : 'border-gray-200'
-                "
+                :class="selectedUser && selectedUser.id === user.id
+                  ? 'border-red-900 bg-red-50/80 ring-1 ring-red-200'
+                  : 'border-gray-200'"
                 @click="selectUser(user)"
               >
                 <img
@@ -79,10 +77,7 @@
               </button>
             </template>
 
-            <p
-              v-else
-              class="py-8 text-center text-sm text-gray-500"
-            >
+            <p v-else class="py-8 text-center text-sm text-gray-500">
               No users found for the current search.
             </p>
           </div>
@@ -90,8 +85,8 @@
 
         <!-- Footer: designation + actions -->
         <footer class="space-y-4 border-t px-6 py-4">
-          <!-- Designation -->
-          <div>
+          <!-- Designation (only in college mode) -->
+          <div v-if="!isAssignHeadMode">
             <label class="mb-1 block text-sm font-medium text-gray-700">
               Designation:
             </label>
@@ -127,8 +122,10 @@
             </div>
           </div>
 
-          <!-- Sub-Designation (only for Administrative Staff) -->
-          <div v-if="selectedDesignation === 'Administrative Staff'">
+          <!-- Sub-Designation (only for Administrative Staff in college mode) -->
+          <div
+            v-if="!isAssignHeadMode && selectedDesignation === 'Administrative Staff'"
+          >
             <label class="mb-1 block text-sm font-medium text-gray-700">
               Specify Role:
             </label>
@@ -159,7 +156,7 @@
               :disabled="!canSave"
               @click="addFacultyOrStaff"
             >
-              Save changes
+              {{ isAssignHeadMode ? 'Assign' : 'Save changes' }}
             </UiButton>
           </div>
         </footer>
@@ -184,13 +181,19 @@ import { ChevronDown, X } from 'lucide-vue-next'
 const props = defineProps<{
   open: boolean
   users: any[]
+  mode?: 'college' | 'assign-head-admin'
+  departmentId?: string | null
 }>()
 
 const emit = defineEmits<{
   (e: 'update:open', value: boolean): void
+  (e: 'saved'): void
 }>()
 
 const db = getFirestore()
+
+const mode = computed(() => props.mode ?? 'college')
+const isAssignHeadMode = computed(() => mode.value === 'assign-head-admin')
 
 const usersSource = computed(() => props.users || [])
 const { searchQuery, filteredUsers } = useUserSearchAndFilter(usersSource)
@@ -223,9 +226,12 @@ const chooseDesignation = (value: string) => {
   designationOpen.value = false
 }
 
-const canSave = computed(
-  () => !!(selectedUser.value && selectedUser.value.id && selectedDesignation.value),
-)
+const canSave = computed(() => {
+  if (!selectedUser.value || !selectedUser.value.id) return false
+  // in assign-head mode, we don't need designation UI
+  if (isAssignHeadMode.value) return true
+  return !!selectedDesignation.value
+})
 
 const resetState = () => {
   searchQuery.value = ''
@@ -245,45 +251,100 @@ const handleCancel = () => {
 }
 
 const addFacultyOrStaff = async () => {
-  if (!selectedUser.value?.id || !selectedDesignation.value) return
+  if (!selectedUser.value?.id) return
 
   const userId = selectedUser.value.id
   const userDocRef = doc(db, 'users', userId)
-  const collegeDocRef = doc(db, 'college_faculty_staff', 'college-wide')
-
   const userDoc = await getDoc(userDocRef)
   if (!userDoc.exists()) return
 
   const userData: any = userDoc.data()
 
-  const newStaff: any = {
-    id: userId,
-    name: userData.fullName || 'Unnamed',
-    designation: selectedDesignation.value,
-    photo: userData.photo || '/placeholder.png',
-    email: userData.email || 'N/A',
-    specialization: userData.specialization || 'N/A',
-    status: 'active',
-  }
+  // 🧩 MODE 1: Assign department Head Admin (manage department page)
+  if (isAssignHeadMode.value) {
+    if (!props.departmentId) {
+      console.error('departmentId is required in assign-head-admin mode')
+      return
+    }
 
-  if (selectedDesignation.value === 'Administrative Staff') {
-    newStaff.subDesignation = subDesignation.value || 'N/A'
-  }
+    const deptRef = doc(db, 'departments', props.departmentId)
+    const deptSnap = await getDoc(deptRef)
+    if (!deptSnap.exists()) return
+    const deptData: any = deptSnap.data()
+    const oldHead = deptData.headAdmin
 
-  if (selectedDesignation.value === 'College Dean') {
-    await updateDoc(collegeDocRef, { collegeDean: newStaff })
-  } else if (selectedDesignation.value === 'College Secretary') {
-    await updateDoc(collegeDocRef, { collegeSecretary: newStaff })
-  } else if (selectedDesignation.value === 'Department Head') {
-    await updateDoc(collegeDocRef, { departmentHeads: arrayUnion(newStaff) })
-  } else if (selectedDesignation.value === 'Administrative Staff') {
-    await updateDoc(collegeDocRef, { adminStaff: arrayUnion(newStaff) })
-  }
+    // demote previous head admin (if any)
+    if (oldHead?.id) {
+      const oldUserRef = doc(db, 'users', oldHead.id)
+      await updateDoc(oldUserRef, {
+        role: 'Faculty',
+        departmentId: null,
+      })
+    }
 
-  await updateDoc(userDocRef, {
-    status: 'active',
-    collegeWide: true,
-  })
+    // promote selected user to Head Admin
+    await updateDoc(userDocRef, {
+      role: 'Head Admin',
+      departmentId: props.departmentId,
+    })
+
+    const headPayload: any = {
+      id: userId,
+      name: userData.fullName || 'Unnamed',
+      fullName: userData.fullName || 'Unnamed',
+      email: userData.email || '',
+      photo: userData.photo || '',
+      specialization: userData.specialization || '',
+      personalEmail: userData.personalEmail || '',
+      contact: userData.contact || '',
+      websites: userData.websites || [],
+      education: userData.education || '',
+      educationHtml: userData.educationHtml || '',
+      designation: 'Department Head',
+    }
+
+    await updateDoc(deptRef, { headAdmin: headPayload })
+
+    emit('saved')
+  } else {
+    // 🧩 MODE 2: College-wide faculty & staff (existing behaviour)
+    if (!selectedDesignation.value) return
+
+    const collegeDocRef = doc(db, 'college_faculty_staff', 'college-wide')
+
+    const newStaff: any = {
+      id: userId,
+      name: userData.fullName || 'Unnamed',
+      designation: selectedDesignation.value,
+      photo: userData.photo || '/placeholder.png',
+      email: userData.email || 'N/A',
+      specialization: userData.specialization || 'N/A',
+      status: 'active',
+    }
+
+    if (selectedDesignation.value === 'Administrative Staff') {
+      newStaff.subDesignation = subDesignation.value || 'N/A'
+    }
+
+    if (selectedDesignation.value === 'College Dean') {
+      await updateDoc(collegeDocRef, { collegeDean: newStaff })
+    } else if (selectedDesignation.value === 'College Secretary') {
+      await updateDoc(collegeDocRef, { collegeSecretary: newStaff })
+    } else if (selectedDesignation.value === 'Department Head') {
+      await updateDoc(collegeDocRef, {
+        departmentHeads: arrayUnion(newStaff),
+      })
+    } else if (selectedDesignation.value === 'Administrative Staff') {
+      await updateDoc(collegeDocRef, { adminStaff: arrayUnion(newStaff) })
+    }
+
+    await updateDoc(userDocRef, {
+      status: 'active',
+      collegeWide: true,
+    })
+
+    emit('saved')
+  }
 
   resetState()
   close()
