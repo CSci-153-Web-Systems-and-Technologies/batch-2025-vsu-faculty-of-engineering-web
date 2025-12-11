@@ -142,18 +142,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  updateDoc,
-  onSnapshot,
-} from 'firebase/firestore'
-import { collection } from 'firebase/firestore'
+import { ref } from 'vue'
+import { UserPlus } from 'lucide-vue-next'
+
 import ProfilePreviewModal from '@/components/ProfilePreviewModal.vue'
 import AddFacultyStaffModal from '@/components/Admin/AddFacultyStaffModal.vue'
-import { UserPlus } from 'lucide-vue-next'
+import { useCollegeFacultyStaff } from '@/composables/useCollegeFacultyStaff'
 
 definePageMeta({
   middleware: ['auth'],
@@ -161,159 +155,21 @@ definePageMeta({
   layout: 'super-admin',
 })
 
-const db = getFirestore()
-
-const collegeDean = ref(null)
-const collegeSecretary = ref(null)
-const departmentHeads = ref([])
-const adminStaff = ref([])
 const showAddModal = ref(false)
 
-const showProfilePreviewModal = ref(false)
-const selectedProfile = ref(null)
-
-const users = ref([])
-
-/* Fetch college-wide leadership & staff document */
-const fetchCollegeFacultyStaff = () => {
-  const docRef = doc(db, 'college_faculty_staff', 'college-wide')
-  onSnapshot(docRef, (docSnap) => {
-    if (docSnap.exists()) {
-      const data = docSnap.data()
-      collegeDean.value = data.collegeDean || null
-      collegeSecretary.value = data.collegeSecretary || null
-      departmentHeads.value = data.departmentHeads || []
-      adminStaff.value = data.adminStaff || []
-    }
-  })
-}
-
-/* Keep college-wide entries in sync with changes in users collection */
-const syncUserChangesToCollege = () => {
-  const usersCollection = collection(db, 'users')
-  onSnapshot(usersCollection, async (snapshot) => {
-    const updatedUsers = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }))
-
-    const collegeDocRef = doc(db, 'college_faculty_staff', 'college-wide')
-    const collegeDoc = await getDoc(collegeDocRef)
-    if (!collegeDoc.exists()) return
-
-    const collegeData = collegeDoc.data()
-
-    const syncUserData = (entry) => {
-      const matchedUser = updatedUsers.find((user) => user.id === entry.id)
-      if (matchedUser) {
-        return {
-          ...entry,
-          name: matchedUser.fullName || entry.name,
-          photo: matchedUser.photo || entry.photo,
-          email: matchedUser.email || entry.email,
-          specialization: matchedUser.specialization || entry.specialization,
-          education: matchedUser.education || entry.education,
-          websites: matchedUser.websites || entry.websites,
-          status: matchedUser.status,
-        }
-      }
-      return entry
-    }
-
-    if (collegeData.collegeDean?.id) {
-      const updatedDean = syncUserData(collegeData.collegeDean)
-      await updateDoc(collegeDocRef, { collegeDean: updatedDean })
-    }
-
-    if (collegeData.collegeSecretary?.id) {
-      const updatedSecretary = syncUserData(collegeData.collegeSecretary)
-      await updateDoc(collegeDocRef, { collegeSecretary: updatedSecretary })
-    }
-
-    const updatedHeads = (collegeData.departmentHeads || []).map(syncUserData)
-    const updatedStaff = (collegeData.adminStaff || []).map(syncUserData)
-
-    await updateDoc(collegeDocRef, {
-      departmentHeads: updatedHeads,
-      adminStaff: updatedStaff,
-    })
-  })
-}
-
-/* Profile preview logic */
-const showProfilePreview = async (profile) => {
-  const user = users.value.find((u) => u.id === profile.id)
-
-  if (user?.role === 'Head Admin' && user.departmentId) {
-    try {
-      const deptSnap = await getDoc(doc(db, 'departments', user.departmentId))
-      if (deptSnap.exists()) {
-        selectedProfile.value = {
-          ...profile,
-          role: user.role,
-          departmentName: deptSnap.data().name || '',
-        }
-      } else {
-        selectedProfile.value = profile
-      }
-    } catch (err) {
-      console.error('Error fetching department name:', err)
-      selectedProfile.value = profile
-    }
-  } else {
-    selectedProfile.value = profile
-  }
-
-  showProfilePreviewModal.value = true
-}
-
-const closeProfilePreviewModal = () => {
-  showProfilePreviewModal.value = false
-  selectedProfile.value = null
-}
-
-/* Remove a user from college-wide lists */
-const removeUserFromCollege = async (user) => {
-  const collegeDocRef = doc(db, 'college_faculty_staff', 'college-wide')
-  const collegeDoc = await getDoc(collegeDocRef)
-  if (!collegeDoc.exists()) return
-
-  const collegeData = collegeDoc.data()
-  const updates = {}
-
-  if (collegeData.collegeDean?.id === user.id) {
-    updates.collegeDean = null
-  } else if (collegeData.collegeSecretary?.id === user.id) {
-    updates.collegeSecretary = null
-  } else if (collegeData.departmentHeads?.some((head) => head.id === user.id)) {
-    updates.departmentHeads = collegeData.departmentHeads.filter(
-      (head) => head.id !== user.id
-    )
-  } else if (collegeData.adminStaff?.some((staff) => staff.id === user.id)) {
-    updates.adminStaff = collegeData.adminStaff.filter(
-      (staff) => staff.id !== user.id
-    )
-  }
-
-  await updateDoc(collegeDocRef, updates)
-}
-
-/* Initial data load */
-onMounted(() => {
-  const usersCollection = collection(db, 'users')
-  onSnapshot(usersCollection, (snapshot) => {
-    users.value = snapshot.docs
-      .map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        name: doc.data().fullName || 'Unnamed',
-      }))
-      .filter((user) => user.role !== 'Super Admin')
-  })
-
-  fetchCollegeFacultyStaff()
-  syncUserChangesToCollege()
-})
+// grab everything from the composable
+const {
+  collegeDean,
+  collegeSecretary,
+  departmentHeads,
+  adminStaff,
+  users,
+  selectedProfile,
+  showProfilePreviewModal,
+  showProfilePreview,
+  closeProfilePreviewModal,
+  removeUserFromCollege,
+} = useCollegeFacultyStaff()
 </script>
 
 <style scoped>
