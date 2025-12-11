@@ -1,5 +1,4 @@
 <template>
-  <!-- 🔁 outer bg is now WHITE -->
   <main class="relative pb-4 bg-white">
     <!-- Hero / Cover -->
     <div class="relative flex items-center w-full border-b-2 font-playfair">
@@ -17,7 +16,7 @@
       </div>
     </div>
 
-    <!-- main content wrapper (now grey card on white bg) -->
+    <!-- main content wrapper (grey card on white bg) -->
     <div class="mx-auto mb-12 flex w-full max-w-6xl justify-center px-4">
       <div
         class="mt-10 w-full rounded-3xl bg-neutral-100 pb-12 pt-8 shadow-md border border-gray-200 md:mt-14 md:px-10"
@@ -93,7 +92,7 @@
               :key="head.id"
               :name="head.name || 'No Head Assigned'"
               :photo="head.photo"
-              :line1="head.designation || 'Department Head'"
+              :line1="head.departmentName || 'No department set'"
               @click="showProfilePreview(head)"
             />
           </div>
@@ -118,8 +117,7 @@
               :key="staff.id"
               :name="staff.name || 'No Staff Assigned'"
               :photo="staff.photo"
-              :line1="staff.subDesignation || 'N/A'"
-              :line2="staff.designation || 'Administrative Staff'"
+              :line1="staff.subDesignation || staff.designation || 'N/A'"
               @click="showProfilePreview(staff)"
             />
           </div>
@@ -137,10 +135,9 @@
   </main>
 </template>
 
-
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getFirestore, doc, onSnapshot } from 'firebase/firestore'
+import { getFirestore, doc, onSnapshot, getDoc } from 'firebase/firestore'
 import FacultyStaffCard from '@/components/FacultyStaffCard.vue'
 import ProfilePreviewModal from '@/components/ProfilePreviewModal.vue'
 
@@ -154,13 +151,13 @@ const coverImageUrl = ref('/images/cet_administration.jpg')
 
 const collegeDean = ref(null)
 const collegeSecretary = ref(null)
-const departmentHeads = ref([])
+const departmentHeads = ref([]) // will be enriched with departmentName
 const adminStaff = ref([])
 
 const showProfilePreviewModal = ref(false)
 const selectedProfile = ref(null)
 
-// 🔹 Fetch cover image from Firestore: page_covers / office_admin
+// 🔹 Cover image (page_covers / office_admin)
 const fetchCoverImage = () => {
   const coverRef = doc(db, 'page_covers', 'office_admin')
   onSnapshot(coverRef, (snap) => {
@@ -172,27 +169,63 @@ const fetchCoverImage = () => {
   })
 }
 
-// Fetch real-time faculty & staff data
+// 🔹 Enrich department heads with departmentName from users + departments
+const enrichDepartmentHeads = async (rawHeads) => {
+  const enriched = await Promise.all(
+    (rawHeads || []).map(async (head) => {
+      let departmentName = head.departmentName || ''
+
+      try {
+        // 1) get the user doc to read departmentId
+        const userSnap = await getDoc(doc(db, 'users', head.id))
+        if (userSnap.exists()) {
+          const userData = userSnap.data()
+          const deptId = userData.departmentId
+
+          // 2) if we have a departmentId, fetch department doc to get its name
+          if (deptId) {
+            const deptSnap = await getDoc(doc(db, 'departments', deptId))
+            if (deptSnap.exists()) {
+              const deptData = deptSnap.data()
+              departmentName = deptData.name || departmentName
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to resolve department for head:', head.id, err)
+      }
+
+      return {
+        ...head,
+        departmentName: departmentName || 'No department set',
+      }
+    }),
+  )
+
+  departmentHeads.value = enriched
+}
+
+// 🔹 Fetch real-time faculty & staff data
 const fetchCollegeFacultyStaff = () => {
   const docRef = doc(db, 'college_faculty_staff', 'college-wide')
-  onSnapshot(docRef, (docSnap) => {
-    if (docSnap.exists()) {
-      const data = docSnap.data()
-      collegeDean.value = data.collegeDean || null
-      collegeSecretary.value = data.collegeSecretary || null
-      departmentHeads.value = data.departmentHeads || []
-      adminStaff.value = data.adminStaff || []
-    }
+  onSnapshot(docRef, async (docSnap) => {
+    if (!docSnap.exists()) return
+
+    const data = docSnap.data()
+    collegeDean.value = data.collegeDean || null
+    collegeSecretary.value = data.collegeSecretary || null
+    adminStaff.value = data.adminStaff || []
+
+    await enrichDepartmentHeads(data.departmentHeads || [])
   })
 }
 
-// Show profile preview modal
+// 🔹 Profile preview modal handlers
 const showProfilePreview = (profile) => {
   selectedProfile.value = profile
   showProfilePreviewModal.value = true
 }
 
-// Close profile preview modal
 const closeProfilePreviewModal = () => {
   showProfilePreviewModal.value = false
   selectedProfile.value = null
