@@ -1,5 +1,6 @@
 <template>
-  <main class="relative pb-4 bg-neutral-100">
+  <!-- 🔁 outer bg is now WHITE -->
+  <main class="relative pb-4 bg-white">
     <!-- Hero / Cover -->
     <div class="relative flex items-center w-full border-b-2 font-playfair">
       <img
@@ -16,119 +17,117 @@
       </div>
     </div>
 
-    <!-- main content -->
-    <div class="flex flex-col items-center h-auto mx-auto mb-12 justify-centerw-full">
+    <!-- main content wrapper (now grey card on white bg) -->
+    <div class="mx-auto mb-12 flex w-full max-w-6xl justify-center px-4">
       <div
-        class="flex flex-col w-3/4 pt-10 pb-5 ml-5 font-bold text-center md:ml-10 md:pt-16 font-playfair "
+        class="mt-10 w-full rounded-3xl bg-neutral-100 pb-12 pt-8 shadow-md border border-gray-200 md:mt-14 md:px-10"
       >
-        <span class="text-2xl text-red-900 md:text-5xl">FACULTY OF ENGINEERING</span>
-        <span class="text-xl text-gray-800 md:text-2xl">Management Committee and Staff</span>
-      </div>
-
-      <!-- College Dean Section -->
-      <div
-        class="flex flex-col items-center justify-center mt-10 space-y-4 md:mt-20"
-        v-if="collegeDean"
-      >
-        <span
-          class="text-xl font-bold text-green-950 md:text-3xl font-roboto_condensed"
-          >COLLEGE DEAN</span
-        >
-        <div
-          class="flex flex-col items-center justify-center p-5 space-y-2 bg-white border shadow-xl cursor-pointer rounded-xl w-[min(56vw,320px)]"
-          @click="showProfilePreview(collegeDean)"
-        >
-          <img
-            :src="collegeDean.photo || '/placeholder.png'"
-            class="object-cover transition rounded-full hover:scale-105 md:size-64 size-28 shrink-0"
-          />
-          <span class="text-base font-medium">
-            {{ collegeDean.name || 'No Dean Assigned' }}
+        <!-- Title -->
+        <div class="pb-5 text-center font-playfair font-bold md:pt-2">
+          <span class="block text-2xl text-red-900 md:text-5xl">
+            FACULTY OF ENGINEERING
+          </span>
+          <span class="block text-xl text-gray-800 md:text-2xl">
+            Management Committee and Staff
           </span>
         </div>
-      </div>
 
-      <!-- College Secretary Section -->
-      <div
-        class="flex flex-col items-center justify-center mt-10 space-y-4 md:mt-20"
-        v-if="collegeSecretary"
-      >
-        <span
-          class="text-xl font-bold text-green-950 md:text-3xl font-roboto_condensed"
-          >COLLEGE SECRETARY</span
-        >
+        <!-- College Dean Section -->
         <div
-          class="flex flex-col items-center justify-center p-5 space-y-2 bg-white border shadow-xl cursor-pointer rounded-xl w-[min(56vw,320px)]"
-          @click="showProfilePreview(collegeSecretary)"
+          v-if="collegeDean"
+          class="mt-10 flex flex-col items-center justify-center space-y-4 md:mt-14"
         >
-          <img
-            :src="collegeSecretary.photo || '/placeholder.png'"
-            class="object-cover transition rounded-full md:size-64 hover:scale-105 size-28 shrink-0"
-          />
-          <span class="text-base font-medium">
-            {{ collegeSecretary.name || 'No Secretary Assigned' }}
-          </span>
-        </div>
-      </div>
-
-      <!-- Department Heads Section -->
-      <div
-        class="grid grid-cols-3 gap-5 px-3 mt-10 text-center md:space-y-4 md:mt-20"
-        v-if="departmentHeads.length"
-      >
-        <div class="flex justify-center col-span-3">
           <span
-            class="text-xl font-bold text-green-950 md:text-3xl font-roboto_condensed"
-            >DEPARTMENT HEADS</span
+            class="text-xl font-roboto_condensed font-bold text-green-950 md:text-3xl"
           >
-        </div>
-        <div
-          v-for="head in departmentHeads"
-          :key="head.id"
-          class="flex flex-col items-center justify-start p-2 space-y-2 text-center bg-white shadow-xl cursor-pointer md:p-5 md:space-y-4 border-1 rounded-xl"
-          @click="showProfilePreview(head)"
-        >
-          <img
-            :src="head.photo || '/placeholder.png'"
-            class="object-contain transition rounded-full md:size-64 hover:scale-105 size-20"
-          />
-          <span class="md:text-base md:font-medium">
-            {{ head.name || 'No Head Assigned' }}
+            COLLEGE DEAN
           </span>
-        </div>
-      </div>
 
-      <!-- Administrative Staff Section -->
-      <div
-        class="grid grid-cols-3 gap-5 px-3 mt-10 text-center md:space-y-4"
-        v-if="adminStaff.length"
-      >
-        <div class="flex justify-center col-span-3">
-          <span
-            class="text-xl font-bold text-green-950 md:text-3xl font-roboto_condensed"
-            >ADMINISTRATIVE STAFF</span
-          >
+          <div class="w-[min(56vw,320px)]">
+            <FacultyStaffCard
+              :name="collegeDean.name || 'No Dean Assigned'"
+              :photo="collegeDean.photo"
+              :line1="collegeDean.designation || 'College Dean'"
+              @click="showProfilePreview(collegeDean)"
+            />
+          </div>
         </div>
+
+        <!-- College Secretary Section -->
         <div
-          v-for="staff in adminStaff"
-          :key="staff.id"
-          class="flex flex-col items-center justify-start p-2 space-y-2 bg-white shadow-xl cursor-pointer md:p-5 md:space-y-4 border-1 rounded-xl"
-          @click="showProfilePreview(staff)"
+          v-if="collegeSecretary"
+          class="mt-10 flex flex-col items-center justify-center space-y-4 md:mt-14"
         >
-          <img
-            :src="staff.photo || '/placeholder.png'"
-            class="transition rounded-full oobject-contain md:size-64 hover:scale-105 size-20"
-          />
-          <span class="md:text-base md:font-medium">
-            {{ staff.name || 'No Staff Assigned' }}
+          <span
+            class="text-xl font-roboto_condensed font-bold text-green-950 md:text-3xl"
+          >
+            COLLEGE SECRETARY
           </span>
-          <span class="text-base text-gray-600">
-            {{ staff.subDesignation || 'N/A' }}
-          </span>
+
+          <div class="w-[min(56vw,320px)]">
+            <FacultyStaffCard
+              :name="collegeSecretary.name || 'No Secretary Assigned'"
+              :photo="collegeSecretary.photo"
+              :line1="collegeSecretary.designation || 'College Secretary'"
+              @click="showProfilePreview(collegeSecretary)"
+            />
+          </div>
         </div>
+
+        <!-- Department Heads Section -->
+        <section
+          v-if="departmentHeads.length"
+          class="mt-12 w-full px-2 md:px-4"
+        >
+          <div class="mb-6 flex justify-center">
+            <span
+              class="text-xl font-roboto_condensed font-bold text-green-950 md:text-3xl"
+            >
+              DEPARTMENT HEADS
+            </span>
+          </div>
+
+          <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <FacultyStaffCard
+              v-for="head in departmentHeads"
+              :key="head.id"
+              :name="head.name || 'No Head Assigned'"
+              :photo="head.photo"
+              :line1="head.designation || 'Department Head'"
+              @click="showProfilePreview(head)"
+            />
+          </div>
+        </section>
+
+        <!-- Administrative Staff Section -->
+        <section
+          v-if="adminStaff.length"
+          class="mt-12 w-full px-2 md:px-4"
+        >
+          <div class="mb-6 flex justify-center">
+            <span
+              class="text-xl font-roboto_condensed font-bold text-green-950 md:text-3xl"
+            >
+              ADMINISTRATIVE STAFF
+            </span>
+          </div>
+
+          <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <FacultyStaffCard
+              v-for="staff in adminStaff"
+              :key="staff.id"
+              :name="staff.name || 'No Staff Assigned'"
+              :photo="staff.photo"
+              :line1="staff.subDesignation || 'N/A'"
+              :line2="staff.designation || 'Administrative Staff'"
+              @click="showProfilePreview(staff)"
+            />
+          </div>
+        </section>
       </div>
     </div>
 
+    <!-- Profile preview modal -->
     <div v-if="showProfilePreviewModal">
       <profile-preview-modal
         :profile="selectedProfile"
@@ -138,9 +137,12 @@
   </main>
 </template>
 
+
 <script setup>
 import { ref, onMounted } from 'vue'
 import { getFirestore, doc, onSnapshot } from 'firebase/firestore'
+import FacultyStaffCard from '@/components/FacultyStaffCard.vue'
+import ProfilePreviewModal from '@/components/ProfilePreviewModal.vue'
 
 definePageMeta({
   layout: 'custom',
