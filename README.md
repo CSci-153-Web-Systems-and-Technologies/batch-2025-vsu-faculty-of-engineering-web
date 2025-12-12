@@ -1,6 +1,6 @@
 # VSU Faculty & Admin Website
 
-A Nuxt 3 web application for the Faculty of Engineering Technology (FOC) of Visayas State University.
+A Nuxt 3 web application for the Faculty of Engineering (FOE) of Visayas State University.
 
 The system has:
 
