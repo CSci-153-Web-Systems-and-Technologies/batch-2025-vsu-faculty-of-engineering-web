@@ -447,7 +447,7 @@ The exact fields may vary, but the system typically uses:
     Actual downloadable files are not stored here; they are linked via URLs inside the HTML.
 
 - `researches`  
-  - Research entries linked to CET  
+  - Research entries
 
 All Firestore reads and writes are handled via VueFire in composables and page components, with security rules enforcing role and permission checks.
 
