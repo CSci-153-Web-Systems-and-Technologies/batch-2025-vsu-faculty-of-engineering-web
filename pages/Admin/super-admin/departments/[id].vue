@@ -5,18 +5,17 @@
         {{ departmentName }} - Degree Programs
       </h1>
 
-      <!-- Edit Toggle -->
       <button
         @click="toggleEditMode"
-        class="flex items-center space-x-2 rounded border px-4 py-2 text-white"
+        class="flex items-center space-x-2 rounded border px-4 py-2 text-white transition"
         :class="editMode ? 'bg-red-500 hover:bg-red-600' : 'bg-maroon hover:bg-red-600'"
+        type="button"
       >
         <Pen class="h-5 w-5" />
         <span>{{ editMode ? 'Done' : 'Edit' }}</span>
       </button>
     </div>
 
-    <!-- 🧑 Department Head Display -->
     <div class="mb-6 flex items-center justify-between rounded bg-white p-4 shadow">
       <div class="flex items-center space-x-4">
         <img
@@ -28,39 +27,41 @@
           <p class="font-semibold">
             {{ departmentHead?.email || 'No Head Admin Assigned' }}
           </p>
-          <span
-            class="rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-800"
-          >
+          <span class="rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
             Department Head
           </span>
         </div>
       </div>
-      <div class="flex space-x-2">
+
+      <div v-if="editMode" class="flex space-x-2">
         <button
           v-if="departmentHead"
           @click="removeHeadAdmin"
           class="rounded bg-red-500 px-4 py-2 text-white hover:bg-red-600"
+          type="button"
         >
           Remove
         </button>
+
         <button
           @click="showAssignModal = true"
           class="rounded bg-maroon px-4 py-2 text-white hover:bg-red-700"
+          type="button"
         >
           Assign
         </button>
       </div>
     </div>
 
-    <!-- Add Degree Program -->
     <button
+      v-if="editMode"
       @click="showAddModal = true"
       class="mb-4 rounded bg-maroon px-4 py-2 text-white hover:bg-red-600"
+      type="button"
     >
       + Add Degree Program
     </button>
 
-    <!-- Degree Program Table -->
     <div class="rounded bg-white shadow-md">
       <table class="w-full table-auto border-collapse text-left">
         <thead>
@@ -69,6 +70,7 @@
             <th v-if="editMode" class="px-6 py-4">Actions</th>
           </tr>
         </thead>
+
         <tbody>
           <tr
             v-for="program in degreePrograms"
@@ -81,58 +83,73 @@
                 class="flex cursor-pointer items-center text-maroon hover:underline"
               >
                 {{ program.name }}
+
                 <button
                   v-if="editMode"
-                  @click="program.editing = true"
+                  @click="startInlineEdit(program)"
                   class="ml-2 text-gray-500 hover:text-gray-700"
+                  type="button"
                 >
                   <Pen class="h-4 w-4" />
                 </button>
               </span>
+
               <input
                 v-else
                 v-model="program.newName"
                 class="w-full rounded border px-2 py-1"
                 @keyup.enter="updateProgramName(program)"
-                @blur="program.editing = false"
+                @keyup.esc="cancelInlineEdit(program)"
+                @blur="cancelInlineEdit(program)"
               />
             </td>
+
             <td v-if="editMode" class="px-6 py-4">
               <button
                 @click="confirmDelete(program.id)"
                 class="rounded bg-red-500 px-3 py-1 text-white hover:bg-red-600"
+                type="button"
               >
                 Delete
               </button>
+            </td>
+          </tr>
+
+          <tr v-if="degreePrograms.length === 0">
+            <td class="px-6 py-6 text-sm text-gray-500" :colspan="editMode ? 2 : 1">
+              No degree programs found.
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Add Program Modal -->
     <div
-      v-if="showAddModal"
-      class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
+      v-if="showAddModal && editMode"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
     >
       <div class="w-96 rounded bg-white p-6 shadow-lg">
         <h2 class="mb-4 text-lg font-bold">Add Degree Program</h2>
+
         <input
           v-model="newProgram"
           type="text"
           class="mb-4 w-full rounded border px-3 py-2"
           placeholder="Enter Program Name"
         />
+
         <div class="flex justify-end space-x-2">
           <button
-            @click="showAddModal = false"
+            @click="closeAddModal"
             class="rounded bg-gray-300 px-4 py-2 hover:bg-gray-400"
+            type="button"
           >
             Cancel
           </button>
           <button
             @click="addDegreeProgram"
             class="rounded bg-maroon px-4 py-2 text-white hover:bg-red-600"
+            type="button"
           >
             Add
           </button>
@@ -140,24 +157,23 @@
       </div>
     </div>
 
-    <!-- Assign Head Admin using shared AddFacultyStaffModal -->
     <AddFacultyStaffModal
       v-model:open="showAssignModal"
       :users="users"
       mode="assign-head-admin"
       :department-id="departmentId"
-      @saved="fetchDegreePrograms"
+      @saved="refreshAll"
     />
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
+<script setup lang="ts">
+import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useFirestore } from 'vuefire'
 import Pen from '@/components/Icons/Pen.vue'
 import AddFacultyStaffModal from '@/components/Admin/AddFacultyStaffModal.vue'
 import {
-  getFirestore,
   doc,
   getDoc,
   getDocs,
@@ -165,6 +181,9 @@ import {
   collection,
   deleteDoc,
   addDoc,
+  query,
+  where,
+  limit,
 } from 'firebase/firestore'
 
 definePageMeta({
@@ -173,92 +192,205 @@ definePageMeta({
   layout: 'super-admin',
 })
 
-const db = getFirestore()
+type DepartmentHead = {
+  id?: string
+  email?: string
+  photo?: string
+}
+
+type DegreeProgramRow = {
+  id: string
+  name: string
+  editing: boolean
+  newName: string
+}
+
+type AppUser = {
+  id: string        // Firestore document ID
+  uid?: string      // Auth UID (stored in the "id" field in your docs)
+  role?: string
+  isActive?: boolean
+  email?: string
+  photo?: string
+  departmentId?: string | null
+  [key: string]: any
+}
+
+const db = useFirestore()
 const route = useRoute()
-const departmentId = route.params.id
-
-
+const departmentId = String(route.params.id)
 
 const departmentName = ref('')
-const degreePrograms = ref([])
-const departmentHead = ref(null)
+const degreePrograms = ref<DegreeProgramRow[]>([])
+const departmentHead = ref<DepartmentHead | null>(null)
 
 const showAddModal = ref(false)
 const showAssignModal = ref(false)
 const newProgram = ref('')
 const editMode = ref(false)
 
-const users = ref([])
+const users = ref<AppUser[]>([])
 
-const fetchDegreePrograms = async () => {
+const fetchDepartmentAndPrograms = async () => {
   const deptRef = doc(db, 'departments', departmentId)
   const deptSnap = await getDoc(deptRef)
-  const deptData = deptSnap.data()
-  departmentName.value = deptData.name
-  departmentHead.value = deptData.headAdmin || null
+
+  if (!deptSnap.exists()) {
+    departmentName.value = '(Department not found)'
+    departmentHead.value = null
+    degreePrograms.value = []
+    return
+  }
+
+  const deptData = deptSnap.data() as any
+  departmentName.value = String(deptData?.name || '')
+  departmentHead.value = (deptData?.headAdmin || null) as DepartmentHead | null
 
   const programsSnapshot = await getDocs(
     collection(db, 'departments', departmentId, 'degreePrograms'),
   )
-  degreePrograms.value = programsSnapshot.docs.map((docSnap) => ({
-    id: docSnap.id,
-    name: docSnap.data().name,
-    editing: false,
-    newName: docSnap.data().name,
-  }))
 
-  const usersSnapshot = await getDocs(collection(db, 'users'))
-  users.value = usersSnapshot.docs
-    .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-    .filter(
-      (user) =>
-        user.role !== 'Super Admin' && // exclude Super Admins
-        user.isActive !== false, // only active users
-    )
+  degreePrograms.value = programsSnapshot.docs.map((d) => {
+    const data = d.data() as any
+    const name = String(data?.name || '')
+    return { id: d.id, name, editing: false, newName: name }
+  })
+}
+
+const fetchUsers = async () => {
+  const snap = await getDocs(collection(db, 'users'))
+
+  const mapped: AppUser[] = snap.docs.map((d) => {
+    const data = d.data() as any
+    return {
+      ...data,
+      id: d.id,
+      uid: data?.id ?? data?.uid ?? undefined,
+    }
+  })
+
+  users.value = mapped.filter((u) => u.role !== 'Super Admin' && u.isActive !== false)
+}
+
+const refreshAll = async () => {
+  await Promise.all([fetchDepartmentAndPrograms(), fetchUsers()])
+}
+
+const closeAddModal = () => {
+  showAddModal.value = false
+  newProgram.value = ''
 }
 
 const addDegreeProgram = async () => {
-  if (!newProgram.value.trim()) return
-  await addDoc(collection(db, 'departments', departmentId, 'degreePrograms'), {
-    name: newProgram.value,
-  })
-  newProgram.value = ''
-  showAddModal.value = false
-  fetchDegreePrograms()
+  if (!editMode.value) return
+  const name = newProgram.value.trim()
+  if (!name) return
+
+  await addDoc(collection(db, 'departments', departmentId, 'degreePrograms'), { name })
+
+  closeAddModal()
+  await fetchDepartmentAndPrograms()
 }
 
-const updateProgramName = async (program) => {
-  if (!program.newName.trim() || program.newName === program.name) return
-  await updateDoc(
-    doc(db, 'departments', departmentId, 'degreePrograms', program.id),
-    { name: program.newName },
-  )
-  program.name = program.newName
+const startInlineEdit = (program: DegreeProgramRow) => {
+  if (!editMode.value) return
+  program.editing = true
+  program.newName = program.name
+}
+
+const cancelInlineEdit = (program: DegreeProgramRow) => {
+  program.editing = false
+  program.newName = program.name
+}
+
+const updateProgramName = async (program: DegreeProgramRow) => {
+  if (!editMode.value) return
+  const name = program.newName.trim()
+
+  if (!name || name === program.name) {
+    cancelInlineEdit(program)
+    return
+  }
+
+  await updateDoc(doc(db, 'departments', departmentId, 'degreePrograms', program.id), {
+    name,
+  })
+
+  program.name = name
   program.editing = false
 }
 
-const confirmDelete = async (programId) => {
+const confirmDelete = async (programId: string) => {
+  if (!editMode.value) return
   if (!window.confirm('Are you sure you want to delete this program?')) return
-  await deleteDoc(
-    doc(db, 'departments', departmentId, 'degreePrograms', programId),
-  )
-  fetchDegreePrograms()
+
+  await deleteDoc(doc(db, 'departments', departmentId, 'degreePrograms', programId))
+  await fetchDepartmentAndPrograms()
 }
 
 const toggleEditMode = () => {
   editMode.value = !editMode.value
+
+  if (!editMode.value) {
+    showAddModal.value = false
+    showAssignModal.value = false
+    newProgram.value = ''
+    degreePrograms.value = degreePrograms.value.map((p) => ({
+      ...p,
+      editing: false,
+      newName: p.name,
+    }))
+  }
+}
+
+watch(editMode, (isOn) => {
+  if (!isOn) showAssignModal.value = false
+})
+
+const resolveHeadUserDocId = async (): Promise<string | null> => {
+  const head = departmentHead.value
+  if (!head) return null
+
+  const maybeDocId = head.id?.trim()
+  if (maybeDocId) {
+    const byDocId = await getDoc(doc(db, 'users', maybeDocId))
+    if (byDocId.exists()) return maybeDocId
+
+    const qUid = query(collection(db, 'users'), where('id', '==', maybeDocId), limit(1))
+    const sUid = await getDocs(qUid)
+    if (!sUid.empty) return sUid.docs[0].id
+  }
+
+  const email = head.email?.trim()
+  if (email) {
+    const qEmail = query(collection(db, 'users'), where('email', '==', email), limit(1))
+    const sEmail = await getDocs(qEmail)
+    if (!sEmail.empty) return sEmail.docs[0].id
+  }
+
+  return null
 }
 
 const removeHeadAdmin = async () => {
-  if (!departmentHead.value?.id) return
+  if (!editMode.value) return
+  if (!departmentHead.value) return
+  if (!window.confirm('Remove this Head Admin?')) return
 
-  const userRef = doc(db, 'users', departmentHead.value.id)
-  await updateDoc(userRef, { role: 'Faculty', departmentId: null })
+  const headUserDocId = await resolveHeadUserDocId()
+
+  if (headUserDocId) {
+    await updateDoc(doc(db, 'users', headUserDocId), {
+      role: 'Faculty',
+      departmentId: null,
+    })
+  }
+
   await updateDoc(doc(db, 'departments', departmentId), { headAdmin: null })
-  fetchDegreePrograms()
+
+  await fetchDepartmentAndPrograms()
 }
 
-onMounted(fetchDegreePrograms)
+onMounted(refreshAll)
 </script>
 
 <style scoped>
