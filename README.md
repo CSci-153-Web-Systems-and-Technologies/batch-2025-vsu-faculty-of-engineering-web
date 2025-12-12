@@ -1,4 +1,4 @@
-# VSU CET Faculty & Admin Website
+# VSU Faculty & Admin Website
 
 A Nuxt 3 web application for the Faculty of Engineering Technology (FOC) of Visayas State University.
 
