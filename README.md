@@ -1,6 +1,6 @@
 # VSU CET Faculty & Admin Website
 
-A Nuxt 3 web application for the College of Engineering Technology (CET) of Visayas State University.
+A Nuxt 3 web application for the Faculty of Engineering Technology (FOC) of Visayas State University.
 
 The system has:
 
@@ -119,7 +119,7 @@ Responsibilities:
   - `pages/Admin/super-admin/manage_accounts.vue`
 - Manage departments and head admins  
   - `pages/Admin/super-admin/departments/*`
-- Manage college-wide content:  
+- Manage Faculty-wide content:  
   - News: `pages/Admin/super-admin/news/*`  
   - Events: `pages/Admin/super-admin/events/*`  
   - Downloads: `pages/Admin/super-admin/downloads/*`  
@@ -130,8 +130,8 @@ Responsibilities:
 - Manage About and Admission content  
   - About: `pages/Admin/super-admin/manage_about.vue`  
   - Admission: `pages/Admin/super-admin/admission.vue`  
-- View and manage faculty and staff for the whole college  
-  - College-wide faculty and staff management: `pages/Admin/super-admin/faculty_staff.vue`  
+- View and manage faculty and staff for the whole Faculty  
+  - Faculty-wide faculty and staff management: `pages/Admin/super-admin/faculty_staff.vue`  
 - Grant and revoke **module access** for Head Admins and Faculty (per user or per department), for example:  
   - Can this Head Admin manage department news?  
   - Can this Faculty member manage research posts?  
@@ -439,10 +439,12 @@ The exact fields may vary, but the system typically uses:
 - `admission_sections`  
   - `why_choose_vsu`, `undergraduate`, `graduate`  
 
-- `college_faculty_staff` and department-level staff collections  
+- `college_faculty_staff` – faculty-wide staff collection  
+    - This collection name is reused from the previous “College of Engineering” version of the system and now represents the Faculty of Engineering.
 
-- `downloads`  
-  - File metadata, categories, and Storage URLs  
+- `downloads`
+  - Stores page content only (author, Tiptap HTML in `content`).  
+    Actual downloadable files are not stored here; they are linked via URLs inside the HTML.
 
 - `researches`  
   - Research entries linked to CET  
