@@ -1,236 +1,218 @@
 // composables/usePublicNavbar.ts
-import {
-  computed,
-  ref,
-  watch,
-  nextTick,
-  onMounted,
-  onBeforeUnmount,
-} from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useDocument, useFirestore } from 'vuefire'
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-} from 'firebase/firestore'
+import { computed, onBeforeUnmount, onMounted, ref } from "vue"
+import { useRoute, useRouter } from "#imports"
+import { useCollection, useDocument, useFirestore } from "vuefire"
+import { collection, doc, orderBy, query, getDocs } from "firebase/firestore"
+
+/**
+ * Convert Firestore values into a strict boolean.
+ * Accepts: boolean, "true"/"false", 1/0
+ * Default fallback: false (hidden unless explicitly enabled)
+ */
+function asBool(val: unknown, fallback = false) {
+  if (typeof val === "boolean") return val
+  if (typeof val === "string") {
+    const v = val.trim().toLowerCase()
+    if (v === "true") return true
+    if (v === "false") return false
+  }
+  if (typeof val === "number") return val === 1
+  return fallback
+}
 
 export function usePublicNavbar() {
-  const router = useRouter()
   const route = useRoute()
+  const router = useRouter()
   const db = useFirestore()
 
-  /* ------------------ basic state ------------------ */
-  const departments = ref<any[]>([])
-  const searchQuery = ref('')
+  // -----------------------------
+  // Departments (Academics/About submenus)
+  // -----------------------------
+  // ✅ include id field directly (no manual map / no undefined doc.id)
+  // ...
+  const departments = ref<Array<{ id: string; name?: string }>>([])
 
-  /* ------------------ flags + extra sections ------------------ */
-  const flagsRef = doc(db, 'settings', 'public_flags')
+  onMounted(async () => {
+    const snap = await getDocs(query(collection(db, "departments"), orderBy("name", "asc")))
+    departments.value = snap.docs.map((d) => ({
+      id: d.id,
+      ...(d.data() as any),
+    }))
+  })
+
+  // -----------------------------
+  // Search
+  // -----------------------------
+  const searchQuery = ref("")
+  const submitSearch = async () => {
+    const q = searchQuery.value.trim()
+    if (!q) return
+    await router.push({ path: "/search", query: { q } })
+  }
+
+  // -----------------------------
+  // Extra Sections (ABOUT)
+  // Source of truth:
+  // - about_sections/extra_section_1 (title, isVisible)
+  // - about_sections/extra_section_2 (title, isVisible)
+  // - settings/public_flags (about_extra_section_1, about_extra_section_2)
+  // Rule: show only if BOTH doc.isVisible and flag are true
+  // -----------------------------
+  const extra1Doc = useDocument(doc(db, "about_sections", "extra_section_1"))
+  const extra2Doc = useDocument(doc(db, "about_sections", "extra_section_2"))
+
+  const flagsRef = doc(db, "settings", "public_flags")
   const { data: flags } = useDocument<Record<string, any>>(flagsRef)
 
-  // ABOUT extras
-  const extra1Doc = useDocument(doc(db, 'about_sections', 'extra_section_1'))
-  const extra2Doc = useDocument(doc(db, 'about_sections', 'extra_section_2'))
-
   const extra1Label = computed(() => {
-    const t = extra1Doc.value?.title as string | undefined
-    return t && t.trim().length ? t : 'Extra Section'
+    const t = extra1Doc.value?.title
+    return t && String(t).trim().length ? String(t).trim() : "Extra Section"
   })
   const extra2Label = computed(() => {
-    const t = extra2Doc.value?.title as string | undefined
-    return t && t.trim().length ? t : 'Extra Section'
+    const t = extra2Doc.value?.title
+    return t && String(t).trim().length ? String(t).trim() : "Extra Section"
+  })
+
+  const extra1HasTitle = computed(() => {
+    const t = extra1Doc.value?.title
+    return !!(t && String(t).trim().length)
+  })
+  const extra2HasTitle = computed(() => {
+    const t = extra2Doc.value?.title
+    return !!(t && String(t).trim().length)
   })
 
   const extra1Visible = computed(() => {
-    const secVal = extra1Doc.value?.isVisible as boolean | undefined
-    const flagVal = flags.value?.['about_extra_section_1'] as boolean | undefined
-    return typeof secVal !== 'undefined'
-      ? secVal
-      : typeof flagVal !== 'undefined'
-        ? flagVal
-        : true
+    const sectionVisible = asBool(extra1Doc.value?.isVisible, false)
+    const flagVisible = asBool(flags.value?.about_extra_section_1, false)
+    return sectionVisible && flagVisible
   })
 
   const extra2Visible = computed(() => {
-    const secVal = extra2Doc.value?.isVisible as boolean | undefined
-    const flagVal = flags.value?.['about_extra_section_2'] as boolean | undefined
-    return typeof secVal !== 'undefined'
-      ? secVal
-      : typeof flagVal !== 'undefined'
-        ? flagVal
-        : true
+    const sectionVisible = asBool(extra2Doc.value?.isVisible, false)
+    const flagVisible = asBool(flags.value?.about_extra_section_2, false)
+    return sectionVisible && flagVisible
   })
 
-  // ADMISSION extras
-  const admExtra1Doc = useDocument(doc(db, 'admission_sections', 'extra_section_1'))
-  const admExtra2Doc = useDocument(doc(db, 'admission_sections', 'extra_section_2'))
+  // ✅ Use these in the navbar v-if
+  const extra1ShouldShow = computed(() => extra1Visible.value && extra1HasTitle.value)
+  const extra2ShouldShow = computed(() => extra2Visible.value && extra2HasTitle.value)
+
+  // -----------------------------
+  // Extra Sections (ADMISSION)
+  // Source of truth:
+  // - admission_sections/extra_section_1 (title, isVisible)
+  // - admission_sections/extra_section_2 (title, isVisible)
+  // - settings/public_flags (admission_extra_section_1, admission_extra_section_2)
+  // -----------------------------
+  const admExtra1Doc = useDocument(doc(db, "admission_sections", "extra_section_1"))
+  const admExtra2Doc = useDocument(doc(db, "admission_sections", "extra_section_2"))
 
   const admExtra1Label = computed(() => {
-    const t = admExtra1Doc.value?.title as string | undefined
-    return t && t.trim().length ? t : 'Extra Section'
+    const t = admExtra1Doc.value?.title
+    return t && String(t).trim().length ? String(t).trim() : "Extra Section"
   })
   const admExtra2Label = computed(() => {
-    const t = admExtra2Doc.value?.title as string | undefined
-    return t && t.trim().length ? t : 'Extra Section'
-  })
-
-  const admExtra1Visible = computed(() => {
-    const secVal = admExtra1Doc.value?.isVisible as boolean | undefined
-    const flagVal = flags.value?.['admission_extra_section_1'] as boolean | undefined
-    return typeof secVal !== 'undefined'
-      ? secVal
-      : typeof flagVal !== 'undefined'
-        ? flagVal
-        : true
-  })
-  const admExtra2Visible = computed(() => {
-    const secVal = admExtra2Doc.value?.isVisible as boolean | undefined
-    const flagVal = flags.value?.['admission_extra_section_2'] as boolean | undefined
-    return typeof secVal !== 'undefined'
-      ? secVal
-      : typeof flagVal !== 'undefined'
-        ? flagVal
-        : true
+    const t = admExtra2Doc.value?.title
+    return t && String(t).trim().length ? String(t).trim() : "Extra Section"
   })
 
   const admExtra1HasTitle = computed(() => {
-    const t = admExtra1Doc.value?.title as string | undefined
-    return !!(t && t.trim().length)
+    const t = admExtra1Doc.value?.title
+    return !!(t && String(t).trim().length)
   })
   const admExtra2HasTitle = computed(() => {
-    const t = admExtra2Doc.value?.title as string | undefined
-    return !!(t && t.trim().length)
+    const t = admExtra2Doc.value?.title
+    return !!(t && String(t).trim().length)
   })
 
-  const admExtra1ShouldShow = computed(
-    () => admExtra1Visible.value && admExtra1HasTitle.value,
-  )
-  const admExtra2ShouldShow = computed(
-    () => admExtra2Visible.value && admExtra2HasTitle.value,
-  )
-
-  const undergradVisible = computed(
-    () => (flags.value?.admissionUndergradVisible as boolean | undefined) ?? true,
-  )
-
-  /* ------------------ tab logic ------------------ */
-  const activeTab = computed(() => {
-    const path = route.path
-    if (path === '/') return 'home'
-    if (path.startsWith('/about')) return 'about'
-    if (path.startsWith('/academics')) return 'academics'
-    if (path.startsWith('/admission')) return 'admission'
-    if (path.startsWith('/research')) return 'research'
-    if (path.startsWith('/news')) return 'news'
-    if (path.startsWith('/download')) return 'download'
-    if (path.startsWith('/obe')) return 'obe'
-    return 'home'
+  const admExtra1Visible = computed(() => {
+    const sectionVisible = asBool(admExtra1Doc.value?.isVisible, false)
+    const flagVisible = asBool(flags.value?.admission_extra_section_1, false)
+    return sectionVisible && flagVisible
   })
 
-  const visualTab = ref<string>(activeTab.value)
+  const admExtra2Visible = computed(() => {
+    const sectionVisible = asBool(admExtra2Doc.value?.isVisible, false)
+    const flagVisible = asBool(flags.value?.admission_extra_section_2, false)
+    return sectionVisible && flagVisible
+  })
 
-  watch(
-    () => route.path,
-    async () => {
-      visualTab.value = activeTab.value
-      await nextTick()
-    },
-  )
+  const admExtra1ShouldShow = computed(() => admExtra1Visible.value && admExtra1HasTitle.value)
+  const admExtra2ShouldShow = computed(() => admExtra2Visible.value && admExtra2HasTitle.value)
 
-  const handleTabChange = (value: string) => {
-    visualTab.value = value
-    switch (value) {
-      case 'home':
-        router.push('/')
-        break
-      case 'research':
-        router.push('/research/')
-        break
-      case 'news':
-        router.push('/news/')
-        break
-      case 'download':
-        router.push('/download/')
-        break
-      case 'obe':
-        router.push('/obe/')
-        break
-      // about / academics / admission are dropdown parents, no direct push
-      default:
-        break
+  // Undergrad toggle (keep as-is; wire to flags later if you want)
+  const undergradVisible = ref(true)
+
+  // -----------------------------
+  // Tabs active state (route-driven)
+  // -----------------------------
+  const normalizedPath = computed(() => {
+    const p = route.path.replace(/\/+$/, "")
+    return p === "" ? "/" : p
+  })
+
+  const visualTab = computed(() => {
+    const p = normalizedPath.value
+    if (p === "/") return "home"
+    if (p.startsWith("/about")) return "about"
+    if (p.startsWith("/academics")) return "academics"
+    if (p.startsWith("/admission")) return "admission"
+    if (p.startsWith("/research")) return "research"
+    if (p.startsWith("/news")) return "news"
+    if (p.startsWith("/download")) return "download"
+    if (p.startsWith("/obe")) return "obe"
+    return "home"
+  })
+
+  const handleTabChange = async (val: string) => {
+    const map: Record<string, string> = {
+      home: "/",
+      about: "/about/faculty",
+      academics: "/academics/academic_calendar",
+      admission: "/admission/why_choose_cet",
+      research: "/research",
+      news: "/news",
+      download: "/download",
+      obe: "/obe",
     }
+
+    const target = map[val]
+    if (!target) return
+    if (normalizedPath.value === target) return
+    await router.push(target)
   }
 
-  /* ------------------ search ------------------ */
-  function submitSearch() {
-    if (searchQuery.value.trim()) {
-      router.push({ path: '/search', query: { q: searchQuery.value.trim() } })
-    }
-  }
-
-  /* ------------------ departments + warm extras ------------------ */
-  onMounted(async () => {
-    try {
-      const snapshot = await getDocs(collection(db, 'departments'))
-      departments.value = snapshot.docs.map((d) => ({
-        id: d.id,
-        name: (d.data().name as string) || 'Unnamed Dept',
-      }))
-
-      // warm a couple of docs to reduce flicker; failures are non-fatal
-      try {
-        await Promise.all([
-          getDoc(doc(db, 'admission_sections', 'extra_section_1')),
-          getDoc(doc(db, 'admission_sections', 'extra_section_2')),
-          getDoc(flagsRef),
-        ])
-      } catch {
-        // ignore warm errors
-      }
-    } catch (err) {
-      console.error('🔥 Failed to load departments:', err)
-    }
-  })
-
-  /* ------------------ hide nav on scroll ------------------ */
+  // -----------------------------
+  // Hide nav on scroll
+  // -----------------------------
   const hideNav = ref(false)
-  let lastScrollY = 0
-
-  function handleScroll() {
-    const currentScrollY = window.scrollY || 0
-    if (currentScrollY > lastScrollY && currentScrollY > 80) {
-      hideNav.value = true
-    } else {
-      hideNav.value = false
-    }
-    lastScrollY = currentScrollY
+  const onScroll = () => {
+    hideNav.value = window.scrollY > 20
   }
 
   onMounted(() => {
-    if (process.client) {
-      lastScrollY = window.scrollY || 0
-      window.addEventListener('scroll', handleScroll)
-    }
+    onScroll()
+    window.addEventListener("scroll", onScroll, { passive: true })
   })
 
   onBeforeUnmount(() => {
-    if (process.client) {
-      window.removeEventListener('scroll', handleScroll)
-    }
+    window.removeEventListener("scroll", onScroll)
   })
 
   return {
-    // data
     departments,
-    searchQuery,
-    hideNav,
 
-    // about extras
+    searchQuery,
+    submitSearch,
+
+    // about extras (use ShouldShow in UI)
     extra1Label,
     extra2Label,
     extra1Visible,
     extra2Visible,
+    extra1ShouldShow,
+    extra2ShouldShow,
 
     // admission extras
     admExtra1Label,
@@ -239,9 +221,8 @@ export function usePublicNavbar() {
     admExtra2ShouldShow,
     undergradVisible,
 
-    // tabs + actions
     visualTab,
     handleTabChange,
-    submitSearch,
+    hideNav,
   }
 }
