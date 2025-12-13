@@ -1,73 +1,151 @@
 // composables/usePublicNavbar.ts
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import { useRoute, useRouter } from "#imports"
-import { useCollection, useFirestore } from "vuefire"
-import { collection, orderBy, query } from "firebase/firestore"
+import { useCollection, useDocument, useFirestore } from "vuefire"
+import { collection, doc, orderBy, query, getDocs } from "firebase/firestore"
 
 /**
- * Public navbar state + routing logic
- * Returns ALL fields used by components/Navbar/Main.vue
+ * Convert Firestore values into a strict boolean.
+ * Accepts: boolean, "true"/"false", 1/0
+ * Default fallback: false (hidden unless explicitly enabled)
  */
+function asBool(val: unknown, fallback = false) {
+  if (typeof val === "boolean") return val
+  if (typeof val === "string") {
+    const v = val.trim().toLowerCase()
+    if (v === "true") return true
+    if (v === "false") return false
+  }
+  if (typeof val === "number") return val === 1
+  return fallback
+}
+
 export function usePublicNavbar() {
   const route = useRoute()
   const router = useRouter()
+  const db = useFirestore()
 
   // -----------------------------
   // Departments (Academics/About submenus)
   // -----------------------------
-  const db = useFirestore()
+  // ✅ include id field directly (no manual map / no undefined doc.id)
+  // ...
+  const departments = ref<Array<{ id: string; name?: string }>>([])
 
-  // Ensures each item has `id` field (used in v-for :key="dept.id")
-  const departmentsData = useCollection(
-    query(collection(db, "departments"), orderBy("name", "asc"))
-  )
-
-  const departments = computed(() =>
-    departmentsData.value.map((doc: any) => ({ id: doc.id, ...doc }))
-  )
+  onMounted(async () => {
+    const snap = await getDocs(query(collection(db, "departments"), orderBy("name", "asc")))
+    departments.value = snap.docs.map((d) => ({
+      id: d.id,
+      ...(d.data() as any),
+    }))
+  })
 
   // -----------------------------
   // Search
   // -----------------------------
   const searchQuery = ref("")
-
   const submitSearch = async () => {
     const q = searchQuery.value.trim()
     if (!q) return
-
-    // Adjust this route if your search page path differs
     await router.push({ path: "/search", query: { q } })
   }
 
   // -----------------------------
-  // Optional dynamic menu items (placeholders with sane defaults)
-  // If you already load these from Firestore, keep your loading logic
-  // but DO NOT remove these refs/computeds or TS will break again.
+  // Extra Sections (ABOUT)
+  // Source of truth:
+  // - about_sections/extra_section_1 (title, isVisible)
+  // - about_sections/extra_section_2 (title, isVisible)
+  // - settings/public_flags (about_extra_section_1, about_extra_section_2)
+  // Rule: show only if BOTH doc.isVisible and flag are true
   // -----------------------------
-  const extra1Label = ref("Extra 1")
-  const extra2Label = ref("Extra 2")
-  const extra1Visible = ref(false)
-  const extra2Visible = ref(false)
+  const extra1Doc = useDocument(doc(db, "about_sections", "extra_section_1"))
+  const extra2Doc = useDocument(doc(db, "about_sections", "extra_section_2"))
 
-  const admExtra1Label = ref("Extra 1")
-  const admExtra2Label = ref("Extra 2")
-  const admExtra1Visible = ref(false)
-  const admExtra2Visible = ref(false)
+  const flagsRef = doc(db, "settings", "public_flags")
+  const { data: flags } = useDocument<Record<string, any>>(flagsRef)
 
-  // Undergrad toggle
+  const extra1Label = computed(() => {
+    const t = extra1Doc.value?.title
+    return t && String(t).trim().length ? String(t).trim() : "Extra Section"
+  })
+  const extra2Label = computed(() => {
+    const t = extra2Doc.value?.title
+    return t && String(t).trim().length ? String(t).trim() : "Extra Section"
+  })
+
+  const extra1HasTitle = computed(() => {
+    const t = extra1Doc.value?.title
+    return !!(t && String(t).trim().length)
+  })
+  const extra2HasTitle = computed(() => {
+    const t = extra2Doc.value?.title
+    return !!(t && String(t).trim().length)
+  })
+
+  const extra1Visible = computed(() => {
+    const sectionVisible = asBool(extra1Doc.value?.isVisible, false)
+    const flagVisible = asBool(flags.value?.about_extra_section_1, false)
+    return sectionVisible && flagVisible
+  })
+
+  const extra2Visible = computed(() => {
+    const sectionVisible = asBool(extra2Doc.value?.isVisible, false)
+    const flagVisible = asBool(flags.value?.about_extra_section_2, false)
+    return sectionVisible && flagVisible
+  })
+
+  // ✅ Use these in the navbar v-if
+  const extra1ShouldShow = computed(() => extra1Visible.value && extra1HasTitle.value)
+  const extra2ShouldShow = computed(() => extra2Visible.value && extra2HasTitle.value)
+
+  // -----------------------------
+  // Extra Sections (ADMISSION)
+  // Source of truth:
+  // - admission_sections/extra_section_1 (title, isVisible)
+  // - admission_sections/extra_section_2 (title, isVisible)
+  // - settings/public_flags (admission_extra_section_1, admission_extra_section_2)
+  // -----------------------------
+  const admExtra1Doc = useDocument(doc(db, "admission_sections", "extra_section_1"))
+  const admExtra2Doc = useDocument(doc(db, "admission_sections", "extra_section_2"))
+
+  const admExtra1Label = computed(() => {
+    const t = admExtra1Doc.value?.title
+    return t && String(t).trim().length ? String(t).trim() : "Extra Section"
+  })
+  const admExtra2Label = computed(() => {
+    const t = admExtra2Doc.value?.title
+    return t && String(t).trim().length ? String(t).trim() : "Extra Section"
+  })
+
+  const admExtra1HasTitle = computed(() => {
+    const t = admExtra1Doc.value?.title
+    return !!(t && String(t).trim().length)
+  })
+  const admExtra2HasTitle = computed(() => {
+    const t = admExtra2Doc.value?.title
+    return !!(t && String(t).trim().length)
+  })
+
+  const admExtra1Visible = computed(() => {
+    const sectionVisible = asBool(admExtra1Doc.value?.isVisible, false)
+    const flagVisible = asBool(flags.value?.admission_extra_section_1, false)
+    return sectionVisible && flagVisible
+  })
+
+  const admExtra2Visible = computed(() => {
+    const sectionVisible = asBool(admExtra2Doc.value?.isVisible, false)
+    const flagVisible = asBool(flags.value?.admission_extra_section_2, false)
+    return sectionVisible && flagVisible
+  })
+
+  const admExtra1ShouldShow = computed(() => admExtra1Visible.value && admExtra1HasTitle.value)
+  const admExtra2ShouldShow = computed(() => admExtra2Visible.value && admExtra2HasTitle.value)
+
+  // Undergrad toggle (keep as-is; wire to flags later if you want)
   const undergradVisible = ref(true)
 
-  // Computeds used in your template
-  const admExtra1ShouldShow = computed(
-    () => admExtra1Visible.value && !!admExtra1Label.value?.trim()
-  )
-  const admExtra2ShouldShow = computed(
-    () => admExtra2Visible.value && !!admExtra2Label.value?.trim()
-  )
-
   // -----------------------------
-  // Tabs active state (fixes the yellow flashing / indicator mismatch)
-  // Normalize trailing slashes and use startsWith for sub-routes.
+  // Tabs active state (route-driven)
   // -----------------------------
   const normalizedPath = computed(() => {
     const p = route.path.replace(/\/+$/, "")
@@ -76,7 +154,6 @@ export function usePublicNavbar() {
 
   const visualTab = computed(() => {
     const p = normalizedPath.value
-
     if (p === "/") return "home"
     if (p.startsWith("/about")) return "about"
     if (p.startsWith("/academics")) return "academics"
@@ -85,7 +162,6 @@ export function usePublicNavbar() {
     if (p.startsWith("/news")) return "news"
     if (p.startsWith("/download")) return "download"
     if (p.startsWith("/obe")) return "obe"
-
     return "home"
   })
 
@@ -103,10 +179,7 @@ export function usePublicNavbar() {
 
     const target = map[val]
     if (!target) return
-
-    // Prevent redundant navigation = less flicker
     if (normalizedPath.value === target) return
-
     await router.push(target)
   }
 
@@ -114,9 +187,7 @@ export function usePublicNavbar() {
   // Hide nav on scroll
   // -----------------------------
   const hideNav = ref(false)
-
   const onScroll = () => {
-    // tweak threshold if you want
     hideNav.value = window.scrollY > 20
   }
 
@@ -129,20 +200,19 @@ export function usePublicNavbar() {
     window.removeEventListener("scroll", onScroll)
   })
 
-  // IMPORTANT: return everything the Navbar/Main.vue destructures
   return {
-    // data
     departments,
 
-    // search
     searchQuery,
     submitSearch,
 
-    // about extras
+    // about extras (use ShouldShow in UI)
     extra1Label,
     extra2Label,
     extra1Visible,
     extra2Visible,
+    extra1ShouldShow,
+    extra2ShouldShow,
 
     // admission extras
     admExtra1Label,
@@ -151,7 +221,6 @@ export function usePublicNavbar() {
     admExtra2ShouldShow,
     undergradVisible,
 
-    // tabs + nav behavior
     visualTab,
     handleTabChange,
     hideNav,

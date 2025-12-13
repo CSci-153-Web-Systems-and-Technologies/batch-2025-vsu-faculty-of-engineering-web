@@ -139,13 +139,13 @@
                     </NuxtLink>
                   </UiDropdownMenuItem>
 
-                  <UiDropdownMenuItem v-if="extra1Visible" :class="dropdownItemClass">
+                  <UiDropdownMenuItem v-if="extra1ShouldShow" :class="dropdownItemClass">
                     <NuxtLink :to="`/about/extra1`" class="block w-full !text-inherit">
                       {{ extra1Label }}
                     </NuxtLink>
                   </UiDropdownMenuItem>
 
-                  <UiDropdownMenuItem v-if="extra2Visible" :class="dropdownItemClass">
+                  <UiDropdownMenuItem v-if="extra2ShouldShow" :class="dropdownItemClass">
                     <NuxtLink :to="`/about/extra2`" class="block w-full !text-inherit">
                       {{ extra2Label }}
                     </NuxtLink>
@@ -343,8 +343,8 @@
     submitSearch,
     extra1Label,
     extra2Label,
-    extra1Visible,
-    extra2Visible,
+    extra1ShouldShow,
+    extra2ShouldShow,
     admExtra1Label,
     admExtra2Label,
     admExtra1ShouldShow,
@@ -374,6 +374,7 @@
     return "home";
   });
 
+  
   /**
    * ✅ Only navigate for the tabs that are actual “single links”.
    * For dropdown tabs (about/academics/admission), we do nothing here
