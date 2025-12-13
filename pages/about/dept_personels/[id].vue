@@ -1,6 +1,6 @@
 <template>
   <!-- 🔁 Outer background is now white -->
-  <div class="min-h-screen bg-white">
+  <div class="min-h-screen mb-4 bg-white">
     <!-- Cover image (uses department personnelCoverUrl with fallback) -->
     <div class="relative flex items-center w-full font-playfair">
       <img
@@ -18,12 +18,12 @@
     </div>
 
     <!-- Main content wrapper: grey panel on white page -->
-    <div class="mx-auto my-12 flex w-full max-w-6xl justify-center px-4">
+    <div class="flex justify-center w-full max-w-6xl px-4 mx-auto mt-12">
       <div
-        class="w-full rounded-3xl bg-neutral-100 border border-gray-200 pb-12 pt-8 shadow-md md:px-10"
+        class="w-full pt-8 pb-12 border border-gray-200 rounded-3xl bg-neutral-50 md:px-10"
       >
         <!-- Head Admin -->
-        <div v-if="dept?.headAdmin" class="mb-12 flex flex-col text-center">
+        <div v-if="dept?.headAdmin" class="flex flex-col mb-12 text-center">
           <span
             class="mb-6 text-2xl font-bold text-green-950 md:text-5xl font-playfair"
           >
@@ -49,7 +49,7 @@
             Faculty and Staff
           </span>
 
-          <div class="mt-6 grid grid-cols-2 gap-6 md:grid-cols-3">
+          <div class="grid grid-cols-2 gap-6 mt-6 md:grid-cols-3">
             <template v-for="(staff, index) in dept.staff" :key="index">
               <FacultyStaffCard
                 v-if="staff.status === 'active'"
