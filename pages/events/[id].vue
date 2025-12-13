@@ -38,15 +38,17 @@
       />
 
       <!-- Title -->
-      <h1 class="text-2xl font-bold text-maroon">
+      <h1 class="text-4xl font-bold text-maroon font-montserrat">
         {{ event?.title }}
       </h1>
 
       <!-- Meta -->
       <div class="text-sm text-gray-600">
-        <span>{{ formatDate(event?.date as any) }}</span>
+        <span>Date: {{ formatDate(event?.date as any) }}</span>
         <template v-if="event?.location"> • <span>{{ event.location }}</span></template>
       </div>
+
+      <span class="text-xs text-gray-600">Published Date: {{ formatPublishedDate(event?.createdAt as any) }}</span>
 
       <!-- Description -->
       <p class="text-gray-800">
@@ -163,6 +165,21 @@ function formatDate(ts?: Timestamp | { seconds: number } | Date | string | null)
     weekday: 'long',
   })
 }
+
+function formatPublishedDate(ts?: Timestamp | { seconds: number } | Date | string | null) {
+  if (!ts) return ''
+  let d: Date
+  if (typeof ts === 'string') d = new Date(ts)
+  else if (ts instanceof Date) d = ts
+  else if ('toDate' in (ts as any)) d = (ts as any).toDate()
+  else d = new Date((ts as any).seconds * 1000)
+
+  return d.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+} 
 
 //Photo Modal
 const showPhotoModal = ref(false)

@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-4xl px-4 py-5 mx-auto mb-4 border rounded">
+  <div class="max-w-4xl px-4 py-5 mx-auto mt-4 mb-4 border rounded">
     <!-- Back button -->
     <div class="mb-2">
       <UiButton
@@ -13,9 +13,9 @@
     </div>
 
     <!-- Research Content -->
-    <div v-if="research">
+    <div v-if="research" class="mt-6">
       <!-- Title -->
-      <h1 class="mb-2 text-3xl font-bold text-red-900">{{ research.title }}</h1>
+      <h1 class="mb-2 text-4xl font-bold text-red-900 font-montserrat">{{ research.title }}</h1>
 
       <!-- Meta (Date • Department • Researchers) -->
       <div class="flex flex-wrap items-center mb-6 text-sm text-gray-600 gap-x-3 gap-y-1">

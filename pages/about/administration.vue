@@ -1,5 +1,5 @@
 <template>
-  <main class="relative pb-4 bg-white">
+  <main class="relative mb-4 bg-white">
     <!-- Hero / Cover -->
     <div class="relative flex items-center w-full border-b-2 font-playfair">
       <img
@@ -17,12 +17,12 @@
     </div>
 
     <!-- main content wrapper (grey card on white bg) -->
-    <div class="mx-auto mb-12 flex w-full max-w-6xl justify-center px-4">
+    <div class="flex justify-center w-full max-w-6xl px-4 mx-auto mb-12">
       <div
-        class="mt-10 w-full rounded-3xl bg-neutral-100 pb-12 pt-8 shadow-md border border-gray-200 md:mt-14 md:px-10"
+        class="w-full pt-8 pb-12 mt-10 border border-gray-200 shadow-md rounded-3xl bg-neutral-50 md:mt-14 md:px-10"
       >
         <!-- Title -->
-        <div class="pb-5 text-center font-playfair font-bold md:pt-2">
+        <div class="pb-5 font-bold text-center font-playfair md:pt-2">
           <span class="block text-2xl text-red-900 md:text-5xl">
             FACULTY OF ENGINEERING
           </span>
@@ -34,10 +34,10 @@
         <!-- College Dean Section -->
         <div
           v-if="collegeDean"
-          class="mt-10 flex flex-col items-center justify-center space-y-4 md:mt-14"
+          class="flex flex-col items-center justify-center mt-10 space-y-4 md:mt-14"
         >
           <span
-            class="text-xl font-roboto_condensed font-bold text-green-950 md:text-3xl"
+            class="text-xl font-bold font-roboto_condensed text-green-950 md:text-3xl"
           >
             COLLEGE DEAN
           </span>
@@ -55,10 +55,10 @@
         <!-- College Secretary Section -->
         <div
           v-if="collegeSecretary"
-          class="mt-10 flex flex-col items-center justify-center space-y-4 md:mt-14"
+          class="flex flex-col items-center justify-center mt-10 space-y-4 md:mt-14"
         >
           <span
-            class="text-xl font-roboto_condensed font-bold text-green-950 md:text-3xl"
+            class="text-xl font-bold font-roboto_condensed text-green-950 md:text-3xl"
           >
             COLLEGE SECRETARY
           </span>
@@ -76,11 +76,11 @@
         <!-- Department Heads Section -->
         <section
           v-if="departmentHeads.length"
-          class="mt-12 w-full px-2 md:px-4"
+          class="w-full px-2 mt-12 md:px-4"
         >
-          <div class="mb-6 flex justify-center">
+          <div class="flex justify-center mb-6">
             <span
-              class="text-xl font-roboto_condensed font-bold text-green-950 md:text-3xl"
+              class="text-xl font-bold font-roboto_condensed text-green-950 md:text-3xl"
             >
               DEPARTMENT HEADS
             </span>
@@ -101,11 +101,11 @@
         <!-- Administrative Staff Section -->
         <section
           v-if="adminStaff.length"
-          class="mt-12 w-full px-2 md:px-4"
+          class="w-full px-2 mt-12 md:px-4"
         >
-          <div class="mb-6 flex justify-center">
+          <div class="flex justify-center mb-6">
             <span
-              class="text-xl font-roboto_condensed font-bold text-green-950 md:text-3xl"
+              class="text-xl font-bold font-roboto_condensed text-green-950 md:text-3xl"
             >
               ADMINISTRATIVE STAFF
             </span>

@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-4xl p-6 mx-auto space-y-6 border rounded">
+  <div class="max-w-4xl p-6 mx-auto mt-4 mb-4 border rounded bg-neutral-50">
     <UiButton
       class="flex flex-row px-2 py-1 text-sm font-semibold text-gray-800 transition bg-gray-200 rounded font-montserrat hover:scale-105 hover:bg-gray-300"
       @click="goBack"
@@ -8,17 +8,19 @@
        Back to News
     </UiButton>
 
-    <img
-      v-if="news?.imageUrl"
-      :src="news.imageUrl"
-      class="w-full max-h-[400px] object-cover rounded cursor-pointer"
-      alt="Cover image"
-      @click="openPhotoModal(news.imageUrl, news.title)"
-    />
+    <div class="mt-10 mb-4">
+      <img
+        v-if="news?.imageUrl"
+        :src="news.imageUrl"
+        class="w-full max-h-[400px] object-cover rounded cursor-pointer"
+        alt="Cover image"
+        @click="openPhotoModal(news.imageUrl, news.title)"
+      />
+    </div>
 
-    <h1 class="text-3xl font-bold text-maroon">{{ news?.title }}</h1>
+    <h1 class="text-4xl font-bold text-red-900 font-montserrat">{{ news?.title }}</h1>
 
-    <div class="text-sm text-gray-500">
+    <div class="mb-6 text-sm text-gray-500">
       <span>By {{ news?.author || 'Unknown' }}</span> |
       <span>{{ formatDate(news?.createdAt as any) }}</span>
     </div>
@@ -134,4 +136,7 @@ function formatDate(ts?: Timestamp | { seconds: number } | Date | null) {
 .text-maroon { color: #740505; }
 .border-maroon { border-color: #740505; }
 .bg-maroon { background-color: #740505; }
+*{
+  outline: 1px solid red; 
+}
 </style>

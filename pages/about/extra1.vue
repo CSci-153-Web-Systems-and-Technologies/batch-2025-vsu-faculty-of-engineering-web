@@ -1,6 +1,6 @@
 <!-- pages/about/extra.vue -->
 <template>
-  <main class="bg-white">
+  <main class="mb-4 bg-white">
     <!-- Banner / Hero -->
     <div class="relative flex items-center w-full font-playfair">
       <img
@@ -37,7 +37,7 @@
       <!-- Content inside grey card -->
       <div class="w-11/12 mx-auto mb-12 md:w-3/4 md:mb-16">
         <div
-          class="px-6 py-8 border rounded-lg bg-neutral-100 border-neutral-200 md:px-10 md:py-10"
+          class="px-6 py-8 border rounded-lg bg-neutral-50 border-neutral-200 md:px-10 md:py-10"
         >
           <div
             class="prose cet-content max-w-none"

@@ -1,5 +1,5 @@
 <template>
-  <main class="bg-white">
+  <main class="mb-4 bg-white">
     <!-- Header with dynamic cover image -->
     <div class="relative flex items-center w-full font-playfair">
       <img

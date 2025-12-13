@@ -1,5 +1,5 @@
 <template>
-  <main class="bg-white">
+  <main class="mb-4 bg-white">
     <!-- Hero with dynamic cover image -->
     <div class="relative flex items-center w-full font-playfair">
       <img
@@ -64,7 +64,7 @@
       <!-- Grey content card (same style as Faculty) -->
       <div class="w-11/12 mx-auto mb-12 md:w-3/4">
         <div
-          class="px-6 py-8 border rounded-lg border-neutral-200 bg-neutral-100 md:px-10 md:py-10"
+          class="px-6 py-8 border rounded-lg border-neutral-200 bg-neutral-50 md:px-10 md:py-10"
         >
           <div
             class="prose cet-content max-w-none"

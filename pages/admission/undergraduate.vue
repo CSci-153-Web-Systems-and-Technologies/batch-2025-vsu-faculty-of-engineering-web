@@ -1,6 +1,6 @@
 <template>
   <!-- Render only when visible; otherwise we already threw 404 -->
-  <main v-if="visible" class="pb-4 bg-white">
+  <main v-if="visible" class="mb-4 bg-white">
     <!-- Header with dynamic cover image -->
     <div class="relative flex items-center w-full font-playfair">
       <img
